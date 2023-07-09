@@ -21,30 +21,22 @@
   for the list of copyright holders.
 */
 
-#include <algorithm>
-#include <chrono>
+#include <cstdio>
 #include <cstring>
-#include "Core/AnalysisModel.hpp"
-#include "Core/Diagnostics.hpp"
-#include "Core/ObjectFactory.hpp"
 
 // Test source files
 #include "../tests/test.hpp"
 
-using namespace broomstyx;
-
-int main( int argc, char **argv )
-{
-    if ( argc != 2 )
-    {
+int main(int argc, char **argv) {
+    if ( argc != 2 ) {
         std::printf("\n\tError in program call: insufficient input!");
         std::printf("\n\tSample invocation: \"broomstyx <inputFile>\"\n\n");
         return 0;
     }
     
-    if ( std::strcmp(argv[1],"--test") == 0 )
+    if (std::strcmp(argv[1],"--test") == 0)
     	perform_tests();
-    else
+/*    else
     {
 		if ( objectFactory().hasError() )
 		{
@@ -75,6 +67,6 @@ int main( int argc, char **argv )
 
 			diagnostics().outputDiagnostics();
 		}
-    }
+    } */
     return 0;
 }
