@@ -4,7 +4,4 @@
 // Intel (R) Math Kernel Library
 #cmakedefine HAVE_MKL
 
-// ViennaCL library
-#cmakedefine HAVE_VIENNACL
-
 #endif
