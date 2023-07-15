@@ -4,4 +4,7 @@
 // Intel (R) Math Kernel Library
 #cmakedefine HAVE_MKL
 
+// Build tests
+#cmakedefine BUILD_TESTS
+
 #endif

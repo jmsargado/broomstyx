@@ -21,21 +21,34 @@
   for the list of copyright holders.
 */
 
+#include "config.h"
+
+#ifdef BUILD_TESTS
+#include "../tests/broomstyx_test.hpp"
+#endif
+
 #include <cstdio>
 #include <cstring>
 
-// Test source files
-#include "../tests/test.hpp"
+#ifdef BUILD_TESTS
+using namespace broomstyx;
+#endif
 
 int main(int argc, char **argv) {
-    if ( argc != 2 ) {
-        std::printf("\n\tError in program call: insufficient input!");
-        std::printf("\n\tSample invocation: \"broomstyx <inputFile>\"\n\n");
-        return 0;
-    }
-    
-    if (std::strcmp(argv[1],"--test") == 0)
-    	perform_tests();
+	if ( argc != 2 ) {
+		std::printf( "\n\tError in program call: insufficient input!" );
+		std::printf( "\n\tSample invocation: \"broomstyx <inputFile>\"\n\n" );
+		return 0;
+	}
+
+    if ( std::strcmp( argv[1],"--test" ) == 0 )
+	{
+#ifdef BUILD_TESTS
+		performTests();
+#else
+		std::printf( "\n\tError: Tests not compiled! Rerun cmake with variable BUILD_TEST=ON.\n\n" );
+#endif
+	}
 /*    else
     {
 		if ( objectFactory().hasError() )
