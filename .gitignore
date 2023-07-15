@@ -11,4 +11,4 @@ src/.vscode/*
 .settings/*
 .kdev4/*
 *.kdev4
-runCmake.sh
+runCMake.sh
