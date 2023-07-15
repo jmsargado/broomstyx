@@ -9,3 +9,5 @@ src/.vscode/*
 .cproject
 .project
 .settings/*
+.kdev4/*
+*.kdev4
