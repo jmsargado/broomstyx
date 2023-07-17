@@ -35,12 +35,14 @@ void Tester::reportResults()
 {
     if ( _testsFailed == 0 )
     {
-        std::printf( " ---------------------------------------------------------------------------\n" );
-        std::printf( "  %-30s : %3d check(s) passed,    none failed\n", _title.c_str(), _testsPassed );
+//         std::printf( " --------------------------------------------------------------------------------\n" );
+        std::printf( "  %-40s : %3d check(s) passed,    none failed\n", _title.c_str(), _testsPassed );
     }
     else
     {
-        std::printf( " ---------------------------------------------------------------------------\n" );
-        std::printf( "  %-30s : %3d check(s) passed, %3d check(s) failed  <--- ATTENTION!!! \n", _title.c_str(), _testsPassed, _testsFailed );
+        std::printf( " --------------------------------------------------------------------------------------------------------\n" );
+        std::printf( "  %-40s : %3d check(s) passed, %3d check(s) failed  <--- ATTENTION!!! \n",
+                     _title.c_str(), _testsPassed, _testsFailed );
+        std::printf( " --------------------------------------------------------------------------------------------------------\n" );
     }
 }

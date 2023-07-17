@@ -19,7 +19,6 @@
   for the list of copyright holders.
 */
 
-
 #include "Math/RealVector.hpp"
 #include "Math/floatingPointComparison.hpp"
 #include "test_RealVector.hpp"
