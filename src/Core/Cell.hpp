@@ -47,7 +47,7 @@ namespace broomstyx
         Cell& operator=( const Cell& ) = delete;
 
         RealVector cellData;
-        NumericsStatus* numericsStatus;
+        NumericsStatus** numericsStatus;
         
         int  id();
         void showInfo();

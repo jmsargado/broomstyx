@@ -43,6 +43,7 @@ DomainManager::DomainManager()
 {
     _fieldsPerNode = -1;
     _constructFaces = false;
+    _name = "DomainManager";
 }
 
 // Destructor
@@ -100,7 +101,7 @@ DomainManager::PhysicalEntity DomainManager::giveDataForPhysicalEntity( int n )
     return _physEnt[ n ];
 }
 // ----------------------------------------------------------------------------
-std::vector<Material*> DomainManager::giveMaterialSetForDomain( int label )
+std::vector<Material*> DomainManager::giveMaterialSetForDomain( int label, int stage )
 {
     std::string name = this->givePhysicalEntityNameFor( label );
     return _materialSet[ name ];
@@ -111,7 +112,7 @@ int DomainManager::giveNumberOfPhysicalNames()
     return _physEnt.size();
 }
 // ----------------------------------------------------------------------------
-Numerics* DomainManager::giveNumericsForDomain( int label )
+Numerics* DomainManager::giveNumericsForDomain( int label, int stage )
 {
     std::string name = this->givePhysicalEntityNameFor( label );
     return _numerics[ name ];

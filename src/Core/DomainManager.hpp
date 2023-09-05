@@ -57,9 +57,9 @@ namespace broomstyx
         
         void                   createPhysicalEntity( int dim, int number, std::string label );
         PhysicalEntity         giveDataForPhysicalEntity( int n );
-        std::vector<Material*> giveMaterialSetForDomain( int label );
+        std::vector<Material*> giveMaterialSetForDomain( int label, int stage );
         int                    giveNumberOfPhysicalNames();
-        Numerics*              giveNumericsForDomain( int label );
+        Numerics*              giveNumericsForDomain( int label, int stage );
         std::string            givePhysicalEntityNameFor( int physEntNum );
         int                    givePhysicalEntityNumberFor( std::string name );
         void                   readDomainAssignmentsFrom( FILE* fp );
@@ -129,10 +129,12 @@ namespace broomstyx
         void  setPartitionOf( Cell *targetCell, int partition );
 
     private:
+        std::string _name;
+
         std::vector<PhysicalEntity> _physEnt;
         
-        std::map<std::string, Numerics*> _numerics;
-        std::map<std::string, std::vector<Material*> > _materialSet;
+        std::map<std::string, std::vector<Numerics*> > _numerics;
+        std::map<std::string, std::vector<std::vector<Material*> > > _materialSet;
         
         int _fieldsPerNode;
         std::list<Node*> _nodeList;
