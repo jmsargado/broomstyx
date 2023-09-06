@@ -38,7 +38,10 @@
 using namespace broomstyx;
 
 // Constructor
-SolutionManager::SolutionManager() {}
+SolutionManager::SolutionManager()
+{
+    _name = "SolutionManager";
+}
 
 // Destructor
 SolutionManager::~SolutionManager()
@@ -170,16 +173,16 @@ void SolutionManager::imposeInitialConditions()
     }
 }
 // ----------------------------------------------------------------------------
-std::vector<int> SolutionManager::giveRegisteredSolutionStages()
-{
-    std::vector<int> stage;
-    stage.assign( (int)_stage.size(), 0 );
-    int counter = 0;
-    for ( auto i : _stage )
-        stage[ counter++ ] = i;
-
-    return stage;
-}
+// std::vector<int> SolutionManager::giveRegisteredSolutionStages()
+// {
+//     std::vector<int> stage;
+//     stage.assign( (int)_stage.size(), 0 );
+//     int counter = 0;
+//     for ( auto i : _stage )
+//         stage[ counter++ ] = i;
+//
+//     return stage;
+// }
 // ----------------------------------------------------------------------------
 UserFunction* SolutionManager::makeNewUserFunction( std::string name )
 {
@@ -191,9 +194,7 @@ UserFunction* SolutionManager::makeNewUserFunction( std::string name )
 // ----------------------------------------------------------------------------
 void SolutionManager::readInitialConditionsFrom( FILE* fp )
 {
-    std::string errmsg, src = "SolutionManager";
-
-    int nInitCond = getIntegerInputFrom( fp, "Failed to read number of initial conditions from input file!", src );
+    int nInitCond = getIntegerInputFrom( fp, "Failed to read number of initial conditions from input file!", _name );
     _initCond.assign( nInitCond, InitialCondition() );
 
     for ( int i = 0; i < nInitCond; i++ )
@@ -202,25 +203,22 @@ void SolutionManager::readInitialConditionsFrom( FILE* fp )
 // ----------------------------------------------------------------------------
 void SolutionManager::readLoadStepsFrom( FILE *fp )
 {
-    std::string src = "SolutionManager";
-
-    int nLoadSteps = getIntegerInputFrom( fp, "Failed to read number of load steps from input file!", src );
+    int nLoadSteps = getIntegerInputFrom( fp, "Failed to read number of load steps from input file!", _name );
 
     _loadStep.assign( nLoadSteps, nullptr );
 
     for ( int i = 0; i < nLoadSteps; i++ )
     {
-        int lsNum = getIntegerInputFrom( fp, "Failed to read load step number from input file!", src );
+        int lsNum = getIntegerInputFrom( fp, "Failed to read load step number from input file!", _name );
         _loadStep[ i ] = new LoadStep( lsNum, _stage.size() );
         _loadStep[ i ]->readDataFrom( fp );
     }
 }
 // ----------------------------------------------------------------------------
-void SolutionManager::readNumberOfStagesFrom( FILE* fp )
-{
-    std::string src = "SolutionManager";
-    _nStages = getIntegerInputFrom( fp, "Failed to read number of solution stages from input file.", src );
-}
+// void SolutionManager::readNumberOfStagesFrom( FILE* fp )
+// {
+//     _nStages = getIntegerInputFrom( fp, "Failed to read number of solution stages from input file.", _name );
+// }
 // ----------------------------------------------------------------------------
 void SolutionManager::registerStage( int stage, std::string tag )
 {

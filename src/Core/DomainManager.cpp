@@ -96,7 +96,7 @@ void DomainManager::createPhysicalEntity( int dim, int number, std::string label
     _physEnt.push_back( newPhysEnt );
 }
 // ----------------------------------------------------------------------------
-DomainManager::PhysicalEntity DomainManager::giveDataForPhysicalEntity( int n )
+DomainManager::PhysicalEntity DomainManager::givePhysicalEntity( int n )
 {
     return _physEnt[ n ];
 }
@@ -104,7 +104,7 @@ DomainManager::PhysicalEntity DomainManager::giveDataForPhysicalEntity( int n )
 std::vector<Material*> DomainManager::giveMaterialSetForDomain( int label, int stage )
 {
     std::string name = this->givePhysicalEntityNameFor( label );
-    return _materialSet[ name ];
+    return _materialSet[ stage ][ name ];
 }
 // ----------------------------------------------------------------------------
 int DomainManager::giveNumberOfPhysicalNames()
@@ -115,7 +115,7 @@ int DomainManager::giveNumberOfPhysicalNames()
 Numerics* DomainManager::giveNumericsForDomain( int label, int stage )
 {
     std::string name = this->givePhysicalEntityNameFor( label );
-    return _numerics[ name ];
+    return _numerics[ stage ][ name ];
 }
 // ----------------------------------------------------------------------------
 std::string DomainManager::givePhysicalEntityNameFor( int physEntNum )
@@ -134,8 +134,8 @@ std::string DomainManager::givePhysicalEntityNameFor( int physEntNum )
     }
     
     if ( !success )
-        throw std::runtime_error( "Failed to find name corresponding to physical entity number '"
-                + std::to_string( physEntNum ) + "'!\nSource: MeshReader" );
+        throw std::runtime_error( "Failed to find name corresponding to physical entity number '" 
+                + std::to_string( physEntNum ) + "'!\nSource: " + _name );
     
     return physEntName;
 }
@@ -156,46 +156,48 @@ int DomainManager::givePhysicalEntityNumberFor( std::string name )
     }
     
     if ( !success )
-        throw std::runtime_error( "Failed to find physical entity number corresponding to '" + name + "'!\nSource: DomainManager" );
+        throw std::runtime_error( "Failed to find physical entity number corresponding to '" + name + "'!\nSource: " + _name );
     
     return physEntNumber;
 }
 // ----------------------------------------------------------------------------
 void DomainManager::readDomainAssignmentsFrom( FILE* fp )
 {
-    std::string key, src = "DomainManager";
-    
-    int nAssign = getIntegerInputFrom( fp, "Failed to read number of domain assignments from input file!", src );
+    int nAssign = getIntegerInputFrom( fp, "Failed to read number of domain assignments from input file!", _name );
     
     for ( int i = 0; i < nAssign; i++ )
     {
-        // Read label
-        std::string domainLabel = getStringInputFrom( fp, "Failed reading domain label from input file!", src );
+        // Read stage number
+        verifyKeyword( fp, "Stage", _name );
+        int stage = getIntegerInputFrom( fp, "Failed reading stage number from input file!", _name );
+
+        // Read domain label
+        std::string domainLabel = getStringInputFrom( fp, "Failed reading domain label from input file!", _name );
                 
         // Read numerics
-        verifyKeyword( fp, key = "Numerics", src );
-        int numericsLabel = getIntegerInputFrom( fp, "Failed reading numerics label from input file!", src );
+        verifyKeyword( fp, "Numerics", _name );
+        int numericsLabel = getIntegerInputFrom( fp, "Failed reading numerics label from input file!", _name );
         
         Numerics* numericsPtr = analysisModel().numericsManager().giveNumerics( numericsLabel );
         
         // Create map entry
         std::pair< std::map<std::string, Numerics*>::iterator, bool> entry;
-        entry = _numerics.insert(std::pair<std::string, Numerics*>( domainLabel, numericsPtr ) );
+        entry = _numerics[ stage ].insert(std::pair<std::string, Numerics*>( domainLabel, numericsPtr ) );
         if ( !entry.second )
             throw std::runtime_error( "Multiple declaration of numerics for label '" + domainLabel
-                + "' detected in input file!\nSource: " + src );
+                + "' detected in input file!\nSource: " + _name );
         
         // Read material set
         int nMat = numericsPtr->requiredNumberOfMaterials();
         if ( nMat > 0 )
         {
-            verifyKeyword( fp, key = "MaterialSet", src );
+            verifyKeyword( fp, "MaterialSet", _name );
         
             std::vector<Material*> matSet;
             matSet.assign( nMat, nullptr );
             for ( int j = 0; j < nMat; j++ )
             {
-                int matLabel = getIntegerInputFrom( fp, "Failed to read material label from input file.", src );
+                int matLabel = getIntegerInputFrom( fp, "Failed to read material label from input file.", _name );
                 matSet[ j ] = analysisModel().materialManager().giveMaterial( matLabel );
             }
 
@@ -208,6 +210,18 @@ void DomainManager::readDomainAssignmentsFrom( FILE* fp )
         }
     }
 }
+// ----------------------------------------------------------------------------
+void DomainManager::readNumberOfStagesFrom( FILE* fp )
+{
+    _nStages = getIntegerInputFrom( fp, "Failed to read number of stages from input file.", _name );
+
+    // Initialize maps for numerics and material sets
+    // Note: Stage numbers start from 1 (and not 0) so we allocate and extra element
+    _numerics.resize( _nStages + 1 );
+    _materialSet.resize( _nStages + 1 );
+}
+
+// Methods involving node access
 // ----------------------------------------------------------------------------
 void DomainManager::countNodes()
 {
@@ -266,13 +280,9 @@ int DomainManager::giveNumberOfNodes()
 // ----------------------------------------------------------------------------
 void DomainManager::makeNewNodeAt( RealVector& location )
 {
-    std::string errmsg, src = "DomainManager";
     if ( _fieldsPerNode == -1 )
-    {
-        errmsg = "Cannot create new node due to undefined number of fields" + std::string( " per node!\nSource: " ) + src;
-        throw std::runtime_error( errmsg );
-    }
-        
+        throw std::runtime_error( "Cannot create new node due to undefined number of fields per node!\nSource: " + _name; );
+
     Node* newNode = new Node();
     
     if ( location.dim() == 2 )
@@ -285,7 +295,7 @@ void DomainManager::makeNewNodeAt( RealVector& location )
     else if ( location.dim() == 3 )
         newNode->_coordinates = location;
     else
-        throw std::runtime_error( "Invalid size of vector input for nodal coordinates!\nSource: " + src );
+        throw std::runtime_error( "Invalid size of vector input for nodal coordinates!\nSource: " + _name );
     
     // Instantiate degrees of freedom for new node
     analysisModel().dofManager().createNodalDofsAt( newNode );
@@ -323,8 +333,7 @@ void DomainManager::performNodalPostProcessing()
 // ----------------------------------------------------------------------------
 void DomainManager::readNumberOfFieldsPerNodeFrom( FILE* fp )
 {
-    std::string str, errmsg, src = "DomainManager";
-    _fieldsPerNode = getIntegerInputFrom( fp, "\nFailed to read number of fields per node from input file", src );
+    _fieldsPerNode = getIntegerInputFrom( fp, "\nFailed to read number of fields per node from input file", _name );
 }
 // ----------------------------------------------------------------------------
 void DomainManager::mustConstructFaces()
@@ -334,12 +343,20 @@ void DomainManager::mustConstructFaces()
 // ----------------------------------------------------------------------------
 void DomainManager::setCoordinatesOf( Node* targetNode, const RealVector& coor )
 {
+    // Need to do the update component wise in order to be able to take advantage of atomic operations
 #ifdef _OPENMP
-#pragma omp critical (NodalCoordinateModification)
+#pragma omp atomic write
 #endif
-    {
-        targetNode->_coordinates = coor;
-    }
+    targetNode->_coordinates(0) = coor(0);
+#ifdef _OPENMP
+#pragma omp atomic write
+#endif
+    targetNode->_coordinates(1) = coor(1);
+#ifdef _OPENMP
+#pragma omp atomic write
+#endif
+    targetNode->_coordinates(2) = coor(2);
+
 }
 // ----------------------------------------------------------------------------
 void DomainManager::setFieldValueAt( Node* targetNode, int fieldNum, double val )
@@ -393,7 +410,7 @@ void DomainManager::constructCellFaces()
 
             // Sanity check
             if ( (int)curCell->_face.size() != nFaces )
-                throw std::runtime_error( "ERROR: Mismatch encountered in number of faces for element type!\nSource:DomainManager" );
+                throw std::runtime_error( "ERROR: Mismatch encountered in number of faces for element type!\nSource: " + _name );
 
             for ( int j = 0; j < nFaces; j++ )
             {
@@ -683,7 +700,7 @@ int DomainManager::giveNumberOfPartitions()
     return _partition.size();
 }
 // ----------------------------------------------------------------------------
-Numerics* DomainManager::giveNumericsFor(Cell* targetCell)
+Numerics* DomainManager::giveNumericsFor( Cell* targetCell )
 {
     if ( targetCell->_isPartOfDomain )
         return this->giveNumericsForDomain( targetCell->_label );
@@ -737,7 +754,7 @@ void DomainManager::initializeNumericsAtCells()
     std::printf( "done (time = %f sec.)\n", tictoc.count() );
 }
 // ----------------------------------------------------------------------------
-Cell* DomainManager::makeNewCellWithLabel( int cellLabel )
+/*Cell* DomainManager::makeNewCellWithLabel( int cellLabel )
 {
     // Instantiate new cells
     Cell* newCell = new Cell();
@@ -763,68 +780,69 @@ Cell* DomainManager::makeNewCellWithLabel( int cellLabel )
 
     return newCell;
 }
+*/
 // ----------------------------------------------------------------------------
-void DomainManager::makeNewFaceBetween( Cell* posCell, Cell* negCell, int posFaceNum )
-{
-    Cell* newFace = new Cell();
-    _faceList.push_back(newFace);
+// void DomainManager::makeNewFaceBetween( Cell* posCell, Cell* negCell, int posFaceNum )
+// {
+//     Cell* newFace = new Cell();
+//     _faceList.push_back(newFace);
     
-    // Store face nodes
-    std::vector<int> faceNodeNum = analysisModel().meshReader().giveFaceNodeNumbersForElementType(posCell->_elType, posFaceNum);
-    int nFaceNodes = faceNodeNum.size();
-    newFace->_node.assign( nFaceNodes, nullptr );
-    for ( int i = 0; i < nFaceNodes; i++ )
-        newFace->_node[i] = posCell->_node[ faceNodeNum[ i ] ];
+//     // Store face nodes
+//     std::vector<int> faceNodeNum = analysisModel().meshReader().giveFaceNodeNumbersForElementType(posCell->_elType, posFaceNum);
+//     int nFaceNodes = faceNodeNum.size();
+//     newFace->_node.assign( nFaceNodes, nullptr );
+//     for ( int i = 0; i < nFaceNodes; i++ )
+//         newFace->_node[i] = posCell->_node[ faceNodeNum[ i ] ];
     
-    // Set face orientations
-    posCell->_faceOrient[ posFaceNum ] = 1;
+//     // Set face orientations
+//     posCell->_faceOrient[ posFaceNum ] = 1;
     
-    // Store adjoining cells (Note: negCell may be 'nullptr' if posCell is at the boundary)
-    newFace->_neighbor.assign( { posCell, negCell } );
+//     // Store adjoining cells (Note: negCell may be 'nullptr' if posCell is at the boundary)
+//     newFace->_neighbor.assign( { posCell, negCell } );
     
-    // Register new face on neighbor cell with negative orientation
-    if ( negCell )
-    {
-        int nFaces = analysisModel().meshReader().giveNumberOfFacesForElementType( negCell->_elType );
-        bool assigned = false;
-        for ( int i = 0; i < nFaces; i++ )
-            if ( negCell->_neighbor[ i ] == posCell )
-            {
-                negCell->_face[ i ] = newFace;
-                negCell->_faceOrient[ i ] = -1;
-                assigned = true;
-            }
+//     // Register new face on neighbor cell with negative orientation
+//     if ( negCell )
+//     {
+//         int nFaces = analysisModel().meshReader().giveNumberOfFacesForElementType( negCell->_elType );
+//         bool assigned = false;
+//         for ( int i = 0; i < nFaces; i++ )
+//             if ( negCell->_neighbor[ i ] == posCell )
+//             {
+//                 negCell->_face[ i ] = newFace;
+//                 negCell->_faceOrient[ i ] = -1;
+//                 assigned = true;
+//             }
         
-        // Sanity check
-        if ( !assigned )
-            throw std::runtime_error( "ERROR: Unable to assign face in neighbor cell with negative orientation!\nSource: DomainManager" );
-    }
+//         // Sanity check
+//         if ( !assigned )
+//             throw std::runtime_error( "ERROR: Unable to assign face in neighbor cell with negative orientation!\nSource: DomainManager" );
+//     }
     
-    // Initialize face fields
-    newFace->cellData.init( _fieldsPerFace );
-}
+//     // Initialize face fields
+//     newFace->cellData.init( _fieldsPerFace );
+// }
 // ----------------------------------------------------------------------------
 void DomainManager::readNumberOfFieldsPerCellFrom( FILE* fp )
 {
     _fieldsPerCell = getIntegerInputFrom( fp, "\nFailed to read number of fields per cell in input file!", "DomainManager" );
 }
 // ----------------------------------------------------------------------------
-void DomainManager::readNumberOfFieldsPerFaceFrom( FILE* fp )
-{
-    _fieldsPerFace = getIntegerInputFrom( fp, "\nFailed to read number of fields per face in input file!", "DomainManager" );
+// void DomainManager::readNumberOfFieldsPerFaceFrom( FILE* fp )
+// {
+//     _fieldsPerFace = getIntegerInputFrom( fp, "\nFailed to read number of fields per face in input file!", "DomainManager" );
     
-    if ( _fieldsPerFace > 0 )
-        this->_constructFaces = true;
-}
+//     if ( _fieldsPerFace > 0 )
+//         this->_constructFaces = true;
+// }
 // ----------------------------------------------------------------------------
-void DomainManager::removeAllCellConstraints()
-{
-    for (int i = 0; i < (int)_domCell.size(); i++)
-    {
-        Numerics* numerics = analysisModel().domainManager().giveNumericsForDomain( _domCell[i]->_label );
-        numerics->removeConstraintsOn( _domCell[ i ] );
-    }
-}
+// void DomainManager::removeAllCellConstraints()
+// {
+//     for (int i = 0; i < (int)_domCell.size(); i++)
+//     {
+//         Numerics* numerics = analysisModel().domainManager().giveNumericsForDomain( _domCell[i]->_label );
+//         numerics->removeConstraintsOn( _domCell[ i ] );
+//     }
+// }
 // ----------------------------------------------------------------------------
 void DomainManager::reorderNodesOf( Cell* targetCell, std::vector<int>& reordering )
 {
@@ -856,32 +874,32 @@ void DomainManager::reportDetailedStatus()
         std::printf( "\n" );
     }
     
-    for ( int i = 0; i < (int)this->_domCell.size(); i++ )
-    {
-        std::vector<Node*> node = _domCell[i]->_node;
-        std::printf( "    cell %d: nodes = ", i );
-        for ( int j = 0; j < (int)node.size(); j++ )
-            std::printf( "%d ", node[ j ]->_id );
-        std::printf( ", dofs = " );
-        for ( int j = 0; j < (int)_domCell[i]->_dof.size(); j++ )
-            std::printf( "%d ", analysisModel().dofManager().giveEquationNumberAt( _domCell[ i ]->_dof[ j ] ) );
-        std::printf( ", neighbors = " );
-        for ( int j = 0; j < (int)_domCell[i]->_neighbor.size(); j++ )
-            if ( _domCell[ i ]->_neighbor[ j ] )
-                std::printf( "%d ", _domCell[i]->_neighbor[ j ]->_id );
-        std::printf( "\n" );
+    // for ( int i = 0; i < (int)this->_domCell.size(); i++ )
+    // {
+    //     std::vector<Node*> node = _domCell[i]->_node;
+    //     std::printf( "    cell %d: nodes = ", i );
+    //     for ( int j = 0; j < (int)node.size(); j++ )
+    //         std::printf( "%d ", node[ j ]->_id );
+    //     std::printf( ", dofs = " );
+    //     for ( int j = 0; j < (int)_domCell[i]->_dof.size(); j++ )
+    //         std::printf( "%d ", analysisModel().dofManager().giveEquationNumberAt( _domCell[ i ]->_dof[ j ] ) );
+    //     std::printf( ", neighbors = " );
+    //     for ( int j = 0; j < (int)_domCell[i]->_neighbor.size(); j++ )
+    //         if ( _domCell[ i ]->_neighbor[ j ] )
+    //             std::printf( "%d ", _domCell[i]->_neighbor[ j ]->_id );
+    //     std::printf( "\n" );
     }
 }
 // ----------------------------------------------------------------------------
 void DomainManager::reportStatus()
 {
     std::printf( "    Nodes          = %ld\n", _node.size() );
-    std::printf( "    Domain cells   = %ld\n", _domCell.size() );
-    std::printf( "    Boundary cells = %ld\n\n", _bndCell.size() );
+    // std::printf( "    Domain cells   = %ld\n", _domCell.size() );
+    // std::printf( "    Boundary cells = %ld\n\n", _bndCell.size() );
 
-    std::printf( "    Number of domain partitions = %ld\n", _partition.size() );
-    for ( int i = 0; i < (int)_partition.size(); i++ )
-        std::printf( "      Cells in partition # %2d = %ld\n", i, _partition[ i ].size() );
+    // std::printf( "    Number of domain partitions = %ld\n", _partition.size() );
+    // for ( int i = 0; i < (int)_partition.size(); i++ )
+    //     std::printf( "      Cells in partition # %2d = %ld\n", i, _partition[ i ].size() );
 }
 // ----------------------------------------------------------------------------
 void DomainManager::setElementTypeOf( Cell* targetCell, int elemType )
@@ -889,10 +907,10 @@ void DomainManager::setElementTypeOf( Cell* targetCell, int elemType )
     targetCell->_elType = elemType;
 }
 // ----------------------------------------------------------------------------
-void DomainManager::setHaloOf(Cell *targetCell, std::vector<int>& halo )
-{
-    targetCell->_halo = halo;
-}
+// void DomainManager::setHaloOf(Cell *targetCell, std::vector<int>& halo )
+// {
+//     targetCell->_halo = halo;
+// }
 // ----------------------------------------------------------------------------
 void DomainManager::setNeighborsOf( Cell *targetCell, std::vector<Cell*>& neighbors )
 {
@@ -902,17 +920,18 @@ void DomainManager::setNeighborsOf( Cell *targetCell, std::vector<Cell*>& neighb
 void DomainManager::setNodesOf( Cell *targetCell, std::vector<int>& cellNodes )
 {
     // Important: this method must not be called from within a loop that is
-    // parallelized using OpenMP
+    // parallelized since std::set is not thread safe!
     
     std::vector<Node*> node(cellNodes.size(), nullptr);
     
-    for ( int i = 0; i < (int)cellNodes.size(); i++ ) 
+    for ( int i = 0; i < (int)cellNodes.size(); i++ )
     {
         node[ i ] = _node[ cellNodes[ i ] ];
-        if ( targetCell->_isPartOfDomain )
-            node[ i ]->_attachedDomCell.insert( targetCell );
-        else
-            node[ i ]->_attachedBndCell.insert( targetCell );
+        node[ i ]->_attachedCell[ targetCell->_dim ].insert( targetCell );
+        // if ( targetCell->_isPartOfDomain )
+        //     node[ i ]->_attachedDomCell.insert( targetCell );
+        // else
+        //     node[ i ]->_attachedBndCell.insert( targetCell );
     }
     
     targetCell->_node = node;

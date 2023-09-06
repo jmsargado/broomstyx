@@ -27,13 +27,14 @@
 
 using namespace broomstyx;
 
-Cell::Cell()
-    : numericsStatus( nullptr )
-    , _partition( -1 )
-    , _isPartOfDomain( false )
+Cell::Cell( int elType, int label, int dim )
+    : _elType( elType )
+    , _label( label )
+    , _dim( dim )
 {}
 
 Cell::~Cell() {}
+
 
 int Cell::id()
 {
@@ -42,26 +43,26 @@ int Cell::id()
 
 void Cell::showInfo()
 {
-    std::printf( "\n  Cell ID = %d, label = %d, dim = %d\n", _id, _label, _dim );
-    std::printf( "  Cell nodes: " );
+    // std::printf( "\n  Cell ID = %d, label = %d, dim = %d\n", _id, _label, _dim );
+    // std::printf( "  Cell nodes: " );
     
-    for ( int i = 0; i < (int)_node.size(); ++i )
-        std::printf( "%d ", _node[ i ]->id() );
+    // for ( int i = 0; i < (int)_node.size(); ++i )
+    //     std::printf( "%d ", _node[ i ]->id() );
     
-    std::printf( "\n  Neighbors: " );
-    for ( int i = 0; i < (int)_neighbor.size(); ++i )
-        if ( _neighbor[ i ] )
-            std::printf( "%d ", _neighbor[ i ]->id() );
-        else
-            std::printf( "null " );
-    std::printf( "\n" );
+    // std::printf( "\n  Neighbors: " );
+    // for ( int i = 0; i < (int)_neighbor.size(); ++i )
+    //     if ( _neighbor[ i ] )
+    //         std::printf( "%d ", _neighbor[ i ]->id() );
+    //     else
+    //         std::printf( "null " );
+    // std::printf( "\n" );
     
-    if ( !_isPartOfDomain )
-    {
-        std::printf( "  Number of associated domain cells = %d\n", (int)_assocDomCell.size() );
-        std::printf( "  Associated domain cell = " );
-        for ( auto it = _assocDomCell.begin(); it != _assocDomCell.end(); ++it )
-            std::printf( "%d ", (*it)->id() );
-        std::printf( "\n" );
-    }
+    // if ( !_isPartOfDomain )
+    // {
+    //     std::printf( "  Number of associated domain cells = %d\n", (int)_assocDomCell.size() );
+    //     std::printf( "  Associated domain cell = " );
+    //     for ( auto it = _assocDomCell.begin(); it != _assocDomCell.end(); ++it )
+    //         std::printf( "%d ", (*it)->id() );
+    //     std::printf( "\n" );
+    // }
 }

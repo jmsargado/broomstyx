@@ -56,18 +56,19 @@ namespace broomstyx
         };
         
         void                   createPhysicalEntity( int dim, int number, std::string label );
-        PhysicalEntity         giveDataForPhysicalEntity( int n );
+        PhysicalEntity         givePhysicalEntity( int n );
         std::vector<Material*> giveMaterialSetForDomain( int label, int stage );
         int                    giveNumberOfPhysicalNames();
         Numerics*              giveNumericsForDomain( int label, int stage );
         std::string            givePhysicalEntityNameFor( int physEntNum );
         int                    givePhysicalEntityNumberFor( std::string name );
         void                   readDomainAssignmentsFrom( FILE* fp );
-        
+        void                   readNumberOfStagesFrom( FILE* fp );
+
         // Methods involving node access
         
-        void   countNodes();
-        std::set<Cell*> giveAttachedDomainCellsOf( Node* node );
+        void            countNodes();
+        // std::set<Cell*> giveAttachedDomainCellsOf( Node* node );
         RealVector      giveCoordinatesOf( Node* node );
         Dof*   giveNodalDof( int dofNum, Node* node );
         double giveFieldValueAt( Node* node, int fieldNum );
@@ -113,17 +114,17 @@ namespace broomstyx
         Numerics* giveNumericsFor( Cell* targetCell );
         void  initializeMaterialsAtCells();
         void  initializeNumericsAtCells();
-        Cell* makeNewCellWithLabel( int cellLabel );
-        void  makeNewFaceBetween( Cell* posCell, Cell* negCell, int posFaceNum );
+        Cell* makeNewCellWithLabel( int cellLabel, int dim );
+        // void  makeNewFaceBetween( Cell* posCell, Cell* negCell, int posFaceNum );
         void  mustConstructFaces();
         void  readNumberOfFieldsPerCellFrom( FILE* fp );
-        void  readNumberOfFieldsPerFaceFrom( FILE* fp );
-        void  removeAllCellConstraints();
+        // void  readNumberOfFieldsPerFaceFrom( FILE* fp );
+        // void  removeAllCellConstraints();
         void  reorderNodesOf( Cell* targetCell, std::vector<int>& reordering );
         void  reportDetailedStatus();
         void  reportStatus();
         void  setElementTypeOf( Cell* targetCell, int elemType );
-        void  setHaloOf( Cell *targetCell, std::vector<int>& halo );
+        // void  setHaloOf( Cell *targetCell, std::vector<int>& halo );
         void  setNeighborsOf( Cell *targetCell, std::vector<Cell*>& neighbors);
         void  setNodesOf( Cell *targetCell, std::vector<int>& cellNodes );
         void  setPartitionOf( Cell *targetCell, int partition );
@@ -133,19 +134,25 @@ namespace broomstyx
 
         std::vector<PhysicalEntity> _physEnt;
         
-        std::map<std::string, std::vector<Numerics*> > _numerics;
-        std::map<std::string, std::vector<std::vector<Material*> > > _materialSet;
+        int _nStages;
+        std::vector<std::map<std::string, Numerics*> > _numerics;
+        std::vector<std::map<std::string, std::vector< Material*> > > _materialSet;
         
         int _fieldsPerNode;
-        std::list<Node*> _nodeList;
+        std::list<Node*>   _nodeList;
         std::vector<Node*> _node;
                 
         int _fieldsPerCell;
-        std::list<Cell*> _bndCellList;
-        std::vector<Cell*> _bndCell;
-        
-        std::list<Cell*> _domCellList;
-        std::vector<Cell*> _domCell;
+
+        // Separate lists for cells of different dimensions
+        std::list<Cell*> _cellList[4];
+        // std::vector<std::vector<Cell*> > _domCell;
+
+//         std::list<Cell*> _bndCellList;
+//         std::vector<Cell*> _bndCell;
+//
+//         std::list<Cell*> _domCellList;
+//         std::vector<Cell*> _domCell;
         
         // Cells representing faces of domain cells
         int _fieldsPerFace;

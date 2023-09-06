@@ -39,15 +39,19 @@ namespace broomstyx
         friend class DofManager;
 
     public:
-        Cell();
+        // Constructor with arguments
+        Cell( int elType, int label, int dim );
+        
+        // Destructor
         virtual ~Cell();
         
-        // Disable copy constructor and assignment operator
+        // Disable default constructor, copy constructor and assignment operator
+        Cell() = delete;
         Cell( const Cell& ) = delete;
         Cell& operator=( const Cell& ) = delete;
 
         RealVector cellData;
-        NumericsStatus** numericsStatus;
+        std::vector<NumericsStatus*> numericsStatus;
         
         int  id();
         void showInfo();
@@ -59,17 +63,17 @@ namespace broomstyx
         int _id;
         int _partition;
 
-        bool _isPartOfDomain;
+//         bool _isPartOfDomain;
         std::vector<Node*> _node;
+        std::vector<Dof*>  _dof;
+        std::vector<Cell*> _neighbor[4];
 
-        std::vector<Dof*> _dof;
-        std::vector<Cell*> _neighbor;
-        std::vector<Cell*> _face;
-        std::vector<int> _faceOrient;
+        // std::vector<Cell*> _face;
+        // std::vector<int>   _faceOrient;
         
         // Used by boundary cells
         std::vector<Cell*> _assocDomCell;
-        std::vector<int> _halo;
+//         std::vector<int> _halo;
     };
 }
 
