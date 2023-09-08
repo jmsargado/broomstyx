@@ -66,13 +66,13 @@ namespace broomstyx
 //         bool _isPartOfDomain;
         std::vector<Node*> _node;
         std::vector<Dof*>  _dof;
-        std::vector<Cell*> _neighbor[4];
+        std::set<Cell*> _neighbor[4];
 
         // std::vector<Cell*> _face;
         // std::vector<int>   _faceOrient;
         
         // Used by boundary cells
-        std::vector<Cell*> _assocDomCell;
+        // std::vector<Cell*> _assocDomCell;
 //         std::vector<int> _halo;
     };
 }
