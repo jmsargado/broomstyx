@@ -64,7 +64,7 @@ namespace broomstyx
         std::string            givePhysicalEntityNameFor( int physEntNum );
         int                    givePhysicalEntityNumberFor( std::string name );
         void                   readDomainAssignmentsFrom( FILE* fp );
-        void                   readNumberOfStagesFrom( FILE* fp );
+        void                   setNumberOfStagesTo( int nStage );
 
         // Methods involving node access
         
@@ -115,7 +115,6 @@ namespace broomstyx
 
         std::vector<PhysicalEntity> _physEnt;
         
-        int _nStages;
         std::vector<std::map<std::string, Numerics*> > _numerics;
         std::vector<std::map<std::string, std::vector< Material*> > > _materialSet;
         

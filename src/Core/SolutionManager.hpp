@@ -48,18 +48,14 @@ namespace broomstyx
         void          commenceSolution();
         LoadStep*     giveCurrentLoadStep();
         int           giveNumberOfSolutionStages();
-//         std::vector<int>
-//                       giveRegisteredSolutionStages();
         void          imposeInitialConditions();
-        UserFunction* makeNewUserFunction(std::string name);
+        UserFunction* makeNewUserFunction( std::string name );
         void          readInitialConditionsFrom( FILE* fp );
         void          readLoadStepsFrom( FILE* fp );
         void          readNumberOfStagesFrom( FILE* fp );
-        void          registerStage( int stage, std::string tag );
-        void          reportRegisteredStages();
 
     private:
-//         int _nStages;
+        int _nStages;
         std::set<int> _stage;
         std::vector<LoadStep*> _loadStep;
         std::vector<InitialCondition> _initCond;
@@ -72,5 +68,4 @@ namespace broomstyx
         virtual ~SolutionManager();
     };
 }
-
 #endif	/* SOLUTIONMANAGER_HPP */

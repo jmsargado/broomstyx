@@ -27,7 +27,6 @@
 #include "Util/Diagnostics.hpp"
 #include "ObjectFactory.hpp"
 #include "DomainManager.hpp"
-#include "DomainManager.hpp"
 #include "LoadStep.hpp"
 #include "Node.hpp"
 #include "OutputManager.hpp"
@@ -46,22 +45,12 @@ SolutionManager::SolutionManager()
 // Destructor
 SolutionManager::~SolutionManager()
 {
-#ifdef VERBOSE_DESTRUCTION
-    std::printf( "\n  Destroying SolutionManager... " );
-    std::fflush( stdout );
-#endif
-
     for ( int i = 0; i < (int)_loadStep.size(); i++ )
         if ( _loadStep[ i ] )
             delete _loadStep[ i ];
 
     for ( int i = 0; i < (int)_userFunction.size(); i++ )
         delete _userFunction[ i ];
-
-#ifdef VERBOSE_DESTRUCTION
-    std::printf( "done." );
-    std::fflush( stdout );
-#endif
 }
 
 // Public methods
@@ -113,7 +102,7 @@ LoadStep* SolutionManager::giveCurrentLoadStep()
 // ----------------------------------------------------------------------------
 int SolutionManager::giveNumberOfSolutionStages()
 {
-    return (int)_stage.size();
+    return _nStage;
 }
 // ----------------------------------------------------------------------------
 void SolutionManager::imposeInitialConditions()
@@ -214,21 +203,9 @@ void SolutionManager::readLoadStepsFrom( FILE *fp )
         _loadStep[ i ]->readDataFrom( fp );
     }
 }
-// ----------------------------------------------------------------------------
-// void SolutionManager::readNumberOfStagesFrom( FILE* fp )
-// {
-//     _nStages = getIntegerInputFrom( fp, "Failed to read number of solution stages from input file.", _name );
-// }
-// ----------------------------------------------------------------------------
-void SolutionManager::registerStage( int stage, std::string tag )
+----------------------------------------------------------------------------
+void SolutionManager::readNumberOfStagesFrom( FILE* fp )
 {
-    _stage.insert( stage );
-}
-// ----------------------------------------------------------------------------
-void SolutionManager::reportRegisteredStages()
-{
-    std::printf( "\nNumber of registered solution stages = %d.\n", (int)_stage.size() );
-    for ( auto curStage : _stage )
-        std::printf( "%d ", curStage );
-    std::printf( "\n" );
+    _nStages = getIntegerInputFrom( fp, "Failed to read number of solution stages from input file.", _name );
+    analysisModel().domainManager().setNumberOfStagesTo( _nStages );
 }

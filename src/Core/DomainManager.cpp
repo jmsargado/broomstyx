@@ -212,14 +212,12 @@ void DomainManager::readDomainAssignmentsFrom( FILE* fp )
     }
 }
 // ----------------------------------------------------------------------------
-void DomainManager::readNumberOfStagesFrom( FILE* fp )
+void DomainManager::setNumberOfStagesTo( int nStage )
 {
-    _nStages = getIntegerInputFrom( fp, "Failed to read number of stages from input file.", _name );
-
     // Initialize maps for numerics and material sets
     // Note: Stage numbers start from 1 (and not 0) so we allocate an extra element
-    _numerics.resize( _nStages + 1 );
-    _materialSet.resize( _nStages + 1 );
+    _numerics.resize( nStages + 1 );
+    _materialSet.resize( nStages + 1 );
 }
 
 // Methods involving node access
