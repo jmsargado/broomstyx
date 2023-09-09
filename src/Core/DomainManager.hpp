@@ -87,43 +87,28 @@ namespace broomstyx
         void  countCells();
         void  finalizeCellDataAt( const TimeData& time, int stage );
         void  findCellAttachments();
-        // void   findBoundaryAssociations();
-        // void   findDomainCellsAssociatedWith( Cell* targetCell );
-        void  findCellsAttachedTo( Cell *targetCell );
-        // void   formDomainPartitions();
-        // Cell*  giveBoundaryCell( int cellNum );
-        Dof*  giveCellDof( int dofNum, Cell *targetCell );
-        // Cell*  giveDomainCell( int cellNum );
-        // std::vector<Cell*> 
-        //        giveDomainCellsAssociatedWith( Cell *targetCell );
+        void  findCellsAttachedTo( Cell* targetCell );
+        Dof*  giveCellDof( int dofNum, Cell* targetCell );
         Cell* giveDomainCellInPartition( int partNum, int cellNum );
         int   giveElementTypeOf( Cell* targetCell );
         int   giveIdOf( Cell *targetCell );
         int   giveLabelOf( Cell *targetCell );
         
         std::set<Cell*> giveNeighborsOf( Cell* targetCell, int dim );
-        std::vector<Node*> giveNodesOf( Cell *targetCell );
+        std::vector<Node*> giveNodesOf( Cell* targetCell );
         
-        // int   giveNumberOfBoundaryCells();
-        // int   giveNumberOfDomainCells();
-        // int   giveNumberOfDomainCellsInPartition( int partNum );
-        int   giveNumberOfNodesOf( Cell *targetCell );
-        // int   giveNumberOfPartitions();
+        int   giveNumberOfNodesOf( Cell* targetCell );
         Numerics* giveNumericsFor( Cell* targetCell, int stage );
         void  initializeMaterialsAtCells();
         void  initializeNumericsAtCells();
-        Cell* makeNewCellWithLabel( int cellLabel, int dim );
-        // void  makeNewFaceBetween( Cell* posCell, Cell* negCell, int posFaceNum );
+        Cell* makeNewCell( int elType, int cellLabel, int dim );
         void  mustConstructFaces();
         void  readNumberOfFieldsPerCellFrom( FILE* fp );
-        // void  readNumberOfFieldsPerFaceFrom( FILE* fp );
-        // void  removeAllCellConstraints();
         void  reorderNodesOf( Cell* targetCell, std::vector<int>& reordering );
         void  reportDetailedStatus();
         void  reportStatus();
         void  setElementTypeOf( Cell* targetCell, int elemType );
-        void  setNeighborsOf( Cell *targetCell, std::set<Cell*>& neighbors, int dim );
-        void  setNodesOf( Cell *targetCell, std::vector<int>& cellNodes );
+        void  setNodesOf( Cell* targetCell, std::vector<int>& cellNodes );
 
     private:
         std::string _name;
@@ -143,20 +128,6 @@ namespace broomstyx
         // Separate lists and vectors for cells of different dimensions
         std::list<Cell*>   _cellList[4];
         std::vector<Cell*> _cell[4];
-
-        // std::vector<std::vector<Cell*> > _domCell;
-
-//         std::list<Cell*> _bndCellList;
-//         std::vector<Cell*> _bndCell;
-//
-//         std::list<Cell*> _domCellList;
-//         std::vector<Cell*> _domCell;
-        
-        // Cells representing faces of domain cells
-        // int _fieldsPerFace;
-        // bool _constructFaces;
-        // std::list<Cell*> _faceList;
-        // std::vector<Cell*> _face;
         
         std::vector<std::vector<Cell*> > _partition;
         

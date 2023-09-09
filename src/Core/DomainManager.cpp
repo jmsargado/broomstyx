@@ -610,95 +610,24 @@ void DomainManager::initializeNumericsAtCells()
     std::printf( "done (time = %f sec.)\n", tictoc.count() );
 }
 // ----------------------------------------------------------------------------
-/*Cell* DomainManager::makeNewCellWithLabel( int cellLabel )
+Cell* DomainManager::makeNewCell( int elType, int cellLabel, dim )
 {
     // Instantiate new cells
-    Cell* newCell = new Cell();
-    newCell->_label = cellLabel;
-    
-    // Retrieve numerics type based on cell label
-    Numerics* numerics = this->giveNumericsForDomain( cellLabel );
-    
+    Cell* newCell = new Cell( elType, cellLabel, dim );
+
     // Add new cell object to relevant list
-    if ( numerics )
-    {
-        newCell->_isPartOfDomain = true;
-        _domCellList.push_back( newCell );
-        analysisModel().dofManager().createCellDofsAt( newCell );
-        if ( _fieldsPerCell > 0 )
-            newCell->cellData.init( _fieldsPerCell );
-    }
-    else
-    {
-        newCell->_isPartOfDomain = false;
-        _bndCellList.push_back( newCell );
-    }
+    _cellList[ dim ].push_back( newCell );
+
+    // Create DOF objects
+    analysisModel().dofManager().createCellDofsAt( newCell );
 
     return newCell;
 }
-*/
-// ----------------------------------------------------------------------------
-// void DomainManager::makeNewFaceBetween( Cell* posCell, Cell* negCell, int posFaceNum )
-// {
-//     Cell* newFace = new Cell();
-//     _faceList.push_back(newFace);
-    
-//     // Store face nodes
-//     std::vector<int> faceNodeNum = analysisModel().meshReader().giveFaceNodeNumbersForElementType(posCell->_elType, posFaceNum);
-//     int nFaceNodes = faceNodeNum.size();
-//     newFace->_node.assign( nFaceNodes, nullptr );
-//     for ( int i = 0; i < nFaceNodes; i++ )
-//         newFace->_node[i] = posCell->_node[ faceNodeNum[ i ] ];
-    
-//     // Set face orientations
-//     posCell->_faceOrient[ posFaceNum ] = 1;
-    
-//     // Store adjoining cells (Note: negCell may be 'nullptr' if posCell is at the boundary)
-//     newFace->_neighbor.assign( { posCell, negCell } );
-    
-//     // Register new face on neighbor cell with negative orientation
-//     if ( negCell )
-//     {
-//         int nFaces = analysisModel().meshReader().giveNumberOfFacesForElementType( negCell->_elType );
-//         bool assigned = false;
-//         for ( int i = 0; i < nFaces; i++ )
-//             if ( negCell->_neighbor[ i ] == posCell )
-//             {
-//                 negCell->_face[ i ] = newFace;
-//                 negCell->_faceOrient[ i ] = -1;
-//                 assigned = true;
-//             }
-        
-//         // Sanity check
-//         if ( !assigned )
-//             throw std::runtime_error( "ERROR: Unable to assign face in neighbor cell with negative orientation!\nSource: DomainManager" );
-//     }
-    
-//     // Initialize face fields
-//     newFace->cellData.init( _fieldsPerFace );
-// }
 // ----------------------------------------------------------------------------
 void DomainManager::readNumberOfFieldsPerCellFrom( FILE* fp )
 {
     _fieldsPerCell = getIntegerInputFrom( fp, "\nFailed to read number of fields per cell in input file!", "DomainManager" );
 }
-// ----------------------------------------------------------------------------
-// void DomainManager::readNumberOfFieldsPerFaceFrom( FILE* fp )
-// {
-//     _fieldsPerFace = getIntegerInputFrom( fp, "\nFailed to read number of fields per face in input file!", "DomainManager" );
-    
-//     if ( _fieldsPerFace > 0 )
-//         this->_constructFaces = true;
-// }
-// ----------------------------------------------------------------------------
-// void DomainManager::removeAllCellConstraints()
-// {
-//     for (int i = 0; i < (int)_domCell.size(); i++)
-//     {
-//         Numerics* numerics = analysisModel().domainManager().giveNumericsForDomain( _domCell[i]->_label );
-//         numerics->removeConstraintsOn( _domCell[ i ] );
-//     }
-// }
 // ----------------------------------------------------------------------------
 void DomainManager::reorderNodesOf( Cell* targetCell, std::vector<int>& reordering )
 {
@@ -778,17 +707,12 @@ void DomainManager::setElementTypeOf( Cell* targetCell, int elemType )
     targetCell->_elType = elemType;
 }
 // ----------------------------------------------------------------------------
-void DomainManager::setNeighborsOf( Cell *targetCell, std::set<Cell*>& neighbors, int dim )
-{
-    targetCell->_neighbor[ dim ] = neighbors;
-}
-// ----------------------------------------------------------------------------
 void DomainManager::setNodesOf( Cell *targetCell, std::vector<int>& cellNodes )
 {
     // Important: this method must not be called from within a loop that is
     // parallelized since std::set is not thread safe!
     
-    std::vector<Node*> node(cellNodes.size(), nullptr);
+    std::vector<Node*> node( cellNodes.size(), nullptr );
     
     for ( int i = 0; i < (int)cellNodes.size(); i++ )
     {
