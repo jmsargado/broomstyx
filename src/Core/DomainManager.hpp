@@ -25,6 +25,7 @@
 #include <cstdio>
 #include <map>
 #include <set>
+#include <string>
 #include <vector>
 #include <list>
 
@@ -82,26 +83,23 @@ namespace broomstyx
         void   setFieldValueAt( Node* targetNode, int fieldNum, double val );
         
         // Methods involving cell access
-        
-        // void   constructCellFaces();
-        // void   countBoundaryCells();
-        // void   countDomainCells();
-        // void   countFaces();
-        void   finalizeCellDataAt( const TimeData& time, int stage );
+
+        void  countCells();
+        void  finalizeCellDataAt( const TimeData& time, int stage );
+        void  findCellAttachments();
         // void   findBoundaryAssociations();
-        // void   findDomainCellNeighbors();
         // void   findDomainCellsAssociatedWith( Cell* targetCell );
-        void   findNeighborsOf( Cell *targetCell );
+        void  findCellsAttachedTo( Cell *targetCell );
         // void   formDomainPartitions();
         // Cell*  giveBoundaryCell( int cellNum );
-        Dof*   giveCellDof( int dofNum, Cell *targetCell );
+        Dof*  giveCellDof( int dofNum, Cell *targetCell );
         // Cell*  giveDomainCell( int cellNum );
         // std::vector<Cell*> 
         //        giveDomainCellsAssociatedWith( Cell *targetCell );
-        Cell*  giveDomainCellInPartition( int partNum, int cellNum );
-        int    giveElementTypeOf( Cell* targetCell );
-        int    giveIdOf( Cell *targetCell );
-        int    giveLabelOf( Cell *targetCell );
+        Cell* giveDomainCellInPartition( int partNum, int cellNum );
+        int   giveElementTypeOf( Cell* targetCell );
+        int   giveIdOf( Cell *targetCell );
+        int   giveLabelOf( Cell *targetCell );
         
         std::set<Cell*> giveNeighborsOf( Cell* targetCell, int dim );
         std::vector<Node*> giveNodesOf( Cell *targetCell );
@@ -124,10 +122,8 @@ namespace broomstyx
         void  reportDetailedStatus();
         void  reportStatus();
         void  setElementTypeOf( Cell* targetCell, int elemType );
-        // void  setHaloOf( Cell *targetCell, std::vector<int>& halo );
         void  setNeighborsOf( Cell *targetCell, std::set<Cell*>& neighbors, int dim );
         void  setNodesOf( Cell *targetCell, std::vector<int>& cellNodes );
-        // void  setPartitionOf( Cell *targetCell, int partition );
 
     private:
         std::string _name;

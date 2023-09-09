@@ -53,9 +53,6 @@ namespace broomstyx
 
         std::set<Cell*> _attachedCell[4];
 
-        // std::set<Cell*> _attachedBndCell;
-        // std::set<Cell*> _attachedDomCell;
-
         RealVector _fieldVal;
         std::vector<Dof*> _dof;
 

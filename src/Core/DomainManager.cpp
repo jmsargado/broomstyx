@@ -42,54 +42,26 @@ using namespace broomstyx;
 DomainManager::DomainManager()
 {
     _fieldsPerNode = -1;
-    // _constructFaces = false;
     _name = "DomainManager";
 }
 
 // Destructor
 DomainManager::~DomainManager()
 {
-#ifdef VERBOSE_DESTRUCTION
-    std::printf( "\n  Destroying DomainManager... " );
-    std::fflush( stdout );
-#endif
-    
     for ( auto curNode : _nodeList )
     {
         analysisModel().dofManager().destroyNodalDofsAt( curNode );
         delete curNode;
     }
     
-    for ( int i = 0; i < 4; i++ )
+    for ( int dim = 0; dim < 4; dim++ )
     {
-        for ( auto curCell : _cellList[ i ] )
+        for ( auto curCell : _cellList[ dim ] )
         {
             analysisModel().dofManager().destroyCellDofsAt( curCell );
             delete curCell;
         }
     }
-
-    // for ( auto curFace : _faceList )
-    // {
-    //     analysisModel().dofManager().destroyFaceDofsAt( curFace );
-    //     delete curFace;
-    // }
-    
-    // for ( auto curDomCell : _domCellList )
-    // {
-    //     analysisModel().dofManager().destroyCellDofsAt( curDomCell );
-    //     this->giveNumericsFor( curDomCell )->deleteNumericsAt( curDomCell );
-        
-    //     delete curDomCell;
-    // }
-    
-    // for ( auto curBndCell : _bndCellList )
-    //     delete curBndCell;
-    
-#ifdef VERBOSE_DESTRUCTION
-    std::printf("done.");
-    std::fflush(stdout);
-#endif
 }
 
 // Public methods
@@ -116,13 +88,13 @@ std::vector<Material*> DomainManager::giveMaterialSetForDomain( int label, int s
     try
     {
         auto materialSet = _materialSet[ stage ].at( name );
+        return materialSet;
     }
     catch( const std::exception& e )
     {
-        throw std::runtime_error( "No Material set defined for '" + name + "' at stage " + std::to_string( stage ) + "!\n" );
+        throw std::runtime_error( "No Material set defined for '" + name + "' at stage "
+            + std::to_string( stage ) + "!\n" );
     }
-    
-    return _materialSet[ stage ].at( name );
 }
 // ----------------------------------------------------------------------------
 int DomainManager::giveNumberOfPhysicalNames()
@@ -245,7 +217,7 @@ void DomainManager::readNumberOfStagesFrom( FILE* fp )
     _nStages = getIntegerInputFrom( fp, "Failed to read number of stages from input file.", _name );
 
     // Initialize maps for numerics and material sets
-    // Note: Stage numbers start from 1 (and not 0) so we allocate and extra element
+    // Note: Stage numbers start from 1 (and not 0) so we allocate an extra element
     _numerics.resize( _nStages + 1 );
     _materialSet.resize( _nStages + 1 );
 }
@@ -365,11 +337,6 @@ void DomainManager::readNumberOfFieldsPerNodeFrom( FILE* fp )
     _fieldsPerNode = getIntegerInputFrom( fp, "\nFailed to read number of fields per node from input file", _name );
 }
 // ----------------------------------------------------------------------------
-// void DomainManager::mustConstructFaces()
-// {
-//     _constructFaces = true;
-// }
-// ----------------------------------------------------------------------------
 void DomainManager::setCoordinatesOf( Node* targetNode, const RealVector& coor )
 {
     // Need to do the update component wise in order to be able to take advantage of atomic operations
@@ -395,103 +362,20 @@ void DomainManager::setFieldValueAt( Node* targetNode, int fieldNum, double val 
 
 // Methods for cell access
 // ----------------------------------------------------------------------------
-// void DomainManager::constructCellFaces()
-// {
-//     if ( _constructFaces )
-//     {
-//         std::chrono::time_point<std::chrono::system_clock> tic, toc;
-//         std::chrono::duration<double> tictoc;
-
-//         std::printf( "  %-40s", "Constructing cell faces ..." );
-//         std::fflush( stdout );
-//         tic = std::chrono::high_resolution_clock::now();
-    
-//         // Initialize vectors to hold pointers to faces and their orientations
-//         // in each domain cell
-
-//         int nDomCells = _domCell.size();
-
-// #ifdef _OPENMP
-// #pragma omp parallel for
-// #endif
-//         for ( int i = 0; i < nDomCells; i++ )
-//         {
-//             Cell* curCell = _domCell[ i ];
-//             int nNeighbors = curCell->_neighbor.size();
-//             curCell->_face.assign( nNeighbors, nullptr );
-//             curCell->_faceOrient.assign( nNeighbors, 0 );
-//         }
-
-//         // Actual construction of faces
-
-//         // Note that this method requires domain cells to already have been counted,
-//         // and the cell-node/cell-cell connectivities to have been determined. 
-//         // It cannot be parallelized since the face cells are constructed on the
-//         // fly and appended to a linked list.
-
-//         if ( !_faceList.empty() )
-//             _faceList.clear();
-
-//         for ( int i = 0; i < nDomCells; i++ )
-//         {
-//             Cell* curCell = _domCell[ i ];
-//             int nFaces = analysisModel().meshReader().giveNumberOfFacesForElementType( curCell->_elType );
-
-//             // Sanity check
-//             if ( (int)curCell->_face.size() != nFaces )
-//                 throw std::runtime_error( "ERROR: Mismatch encountered in number of faces for element type!\nSource: " + _name );
-
-//             for ( int j = 0; j < nFaces; j++ )
-//             {
-//                 if ( curCell->_faceOrient[ j ] == 0 )
-//                 {
-//                     // Create cell object representing face
-//                     this->makeNewFaceBetween( curCell, curCell->_neighbor[ j ], j );
-//                 }
-//             }
-//         }
-//         this->countFaces();
-        
-//         toc = std::chrono::high_resolution_clock::now();
-//         tictoc = toc - tic;
-//         std::printf( "done (time = %f sec.)\n", tictoc.count() );
-        
-//         std::printf( "\n    Domain cell faces = %d\n\n", (int)_faceList.size() );
-//     }
-// }
-// ----------------------------------------------------------------------------
-// void DomainManager::countBoundaryCells()
-// {
-//     _bndCell.assign( _bndCellList.size(), nullptr );
-//     int curCount = 0;
-//     for ( auto it = _bndCellList.begin(); it != _bndCellList.end(); it++ )
-//     {
-//         _bndCell[ curCount ] = *it;
-//         (*it)->_id = curCount++;
-//     }
-// }
-// ----------------------------------------------------------------------------
-// void DomainManager::countDomainCells()
-// {
-//     _domCell.assign( _domCellList.size(), nullptr );
-//     int curCount = 0;
-//     for ( auto it = _domCellList.begin(); it != _domCellList.end(); it++ )
-//     {
-//         _domCell[ curCount ] = *it;
-//         (*it)->_id = curCount++;
-//     }
-// }
-// ----------------------------------------------------------------------------
-// void DomainManager::countFaces()
-// {
-//     _face.assign( _faceList.size(), nullptr );
-//     int curCount = 0;
-//     for ( auto it = _faceList.begin(); it != _faceList.end(); it++ )
-//     {
-//         _face[curCount] = *it;
-//         (*it)->_id = curCount++;
-//     }
-// }
+void DomainManager::countCells()
+{
+    int totCount = 0;
+    for ( int dim = 0; dim < 4; dim++ )
+    {
+        _cell[ dim ].assign( _cellList[ dim ].size(), nullptr );
+        int vecCount = 0;
+        for ( auto it = _cellList[ dim ].begin(); it != _cellList[ dim ].end(); it++ )
+        {
+            _cell[ vecCount++ ] = *it;
+            (*it)->_id = totCount++;
+        }
+    }
+}
 // ----------------------------------------------------------------------------
 void DomainManager::finalizeCellDataAt( const TimeData& time, int stage )
 {
@@ -509,96 +393,30 @@ void DomainManager::finalizeCellDataAt( const TimeData& time, int stage )
     }
 }
 // ----------------------------------------------------------------------------
-// void DomainManager::findBoundaryAssociations()
-// {
-//     std::chrono::time_point<std::chrono::system_clock> tic, toc;
-//     std::chrono::duration<double> tictoc;
-    
-//     std::printf( "  %-40s", "Finding boundary associations ..." );
-//     std::fflush( stdout );
-//     tic = std::chrono::high_resolution_clock::now();
+void DomainManager::findCellAttachments()
+{
+     std::chrono::time_point<std::chrono::system_clock> tic, toc;
+     std::chrono::duration<double> tictoc;
 
-// #ifdef _OPENMP
-// #pragma omp parallel for
-// #endif
-//     for ( int i = 0; i < (int)_bndCell.size(); i++ )
-//         this->findDomainCellsAssociatedWith( _bndCell[ i ] );
+     std::printf( "  %-40s", "Finding cell attachments ..." );
+     std::fflush( stdout );
+     tic = std::chrono::high_resolution_clock::now();
 
-//     toc = std::chrono::high_resolution_clock::now();
-//     tictoc = toc - tic;
-//     std::printf( "done (time = %f sec.)\n", tictoc.count() );
-// }
+     for ( int dim = 0; dim < 4; dim ++ )
+     {
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+         for ( int i = 0; i < (int) _domCell.size(); i++ )
+             this->findCellsAttachedTo( _cell[ dim ][ i ] );
+     }
+
+     toc = std::chrono::high_resolution_clock::now();
+     tictoc = toc - tic;
+     std::printf( "done (time = %f sec.)\n", tictoc.count() );
+}
 // ----------------------------------------------------------------------------
-// void DomainManager::findDomainCellNeighbors()
-// {
-//     std::chrono::time_point<std::chrono::system_clock> tic, toc;
-//     std::chrono::duration<double> tictoc;
-    
-//     std::printf( "  %-40s", "Finding domain cell neighbors ..." );
-//     std::fflush( stdout );
-//     tic = std::chrono::high_resolution_clock::now();
-    
-// #ifdef _OPENMP
-// #pragma omp parallel for
-// #endif
-//     for ( int i = 0; i < (int)_domCell.size(); i++ )
-//     {
-//         this->findNeighborsOf( _domCell[ i ] );
-//     }
-
-//     toc = std::chrono::high_resolution_clock::now();
-//     tictoc = toc - tic;
-//     std::printf( "done (time = %f sec.)\n", tictoc.count() );
-// }
-// ----------------------------------------------------------------------------
-// void DomainManager::findDomainCellsAssociatedWith( Cell *targetCell )
-// {    
-//     if ( targetCell->_isPartOfDomain )
-//         throw std::runtime_error( "ERROR: Search request made for associated domain cell of a cell\nthat is already part of the domain!\nSource: DomainManager" );
-    
-//     // Form set of all elements attached to all the nodes of the 
-//     // current boundary element
-//     std::set<Cell*> candCell;
-//     int nNodes = targetCell->_node.size();
-    
-//     for ( int i = 0; i < nNodes; i++ )
-//     {
-//         std::set<Cell*> temp = targetCell->_node[ i ]->_attachedDomCell;
-        
-//         std::set<Cell*>::iterator it;
-//         for ( it = temp.begin(); it != temp.end(); it++ )
-//             candCell.insert( *it );
-//     }
-    
-//     std::vector<bool> hasNode;
-//     std::set<Cell*>::iterator it;
-//     it = candCell.begin();
-    
-//     for ( it = candCell.begin(); it != candCell.end(); ++it )
-//     {
-//         std::vector<Node*> ccNode = (*it)->_node;
-        
-//         hasNode.assign( nNodes, false );
-//         bool found = true;
-//         for ( int i = 0; i < nNodes; i++ )
-//         {
-//             for ( int j = 0; j < (int)ccNode.size(); j++ )
-//                 if ( targetCell->_node[ i ] == ccNode[ j ] )
-//                     hasNode[ i ] = true;
-            
-//             if ( hasNode[ i ] == false )
-//                 found = false;
-//         }
-        
-//         if ( found )
-//             targetCell->_assocDomCell.push_back( *it );
-//     }
-
-//     if ( targetCell->_assocDomCell.size() == 0 )
-//         throw std::runtime_error( "ERROR: Failed finding domain cell association!\nSource: DomainManager" );
-// }
-// ----------------------------------------------------------------------------
-void DomainManager::findNeighborsOf( Cell* targetCell )
+void DomainManager::findCellsAttachedTo( Cell* targetCell )
 {
     std::vector<Node*> cellNode = targetCell->_node;
     int nCellNodes = cellNode.size();
@@ -611,8 +429,8 @@ void DomainManager::findNeighborsOf( Cell* targetCell )
 
             if ( targetCell->_dim < curDim )
             {
-                // All nodes of targetCell must also be nodes of candidate neighbor
-                bool candidateIsNeighbor = true;
+                // All nodes of targetCell must also be nodes of candidate attached cell
+                bool candidateIsAttached = true;
                 for ( auto it = candidate.begin(); it != candidate.end(); ++it )
                 {
                     std::vector<Node*> candNode = (*it)->_node;
@@ -624,16 +442,19 @@ void DomainManager::findNeighborsOf( Cell* targetCell )
                                 nodeIsShared = true;
                         
                         if ( !nodeIsShared )
-                            candidateIsNeighbor = false;
+                            candidateIsAttached = false;
                     }
-                    if ( candidateIsNeighbor )
-                        targetCell->_neighbor[ curDim ].insert( *it );
+                    if ( candidateIsAttached )
+                    {
+                        targetCell->_attachedCell[ curDim ].insert( *it );
+                        (*it)->_attachedCell[ _dim ].insert( targetCell );
+                    }
                 }
             }
             else if ( targetCell->_dim > curDim )
             {
-                // All nodes of candidate neighbor must also be nodes of targetCell
-                bool candidateIsNeighbor = true;
+                // All nodes of candidate attached cell must also be nodes of targetCell
+                bool candidateIsAttached = true;
                 for ( auto it = candidate.begin(); it != candidate.end(); ++it )
                 {
                     std::vector<Node*> candNode = (*it)->_node;
@@ -645,17 +466,22 @@ void DomainManager::findNeighborsOf( Cell* targetCell )
                                 nodeIsShared = true;
                         
                         if ( !nodeIsShared )
-                            candidateIsNeighbor = false;
+                            candidateIsAttached = false;
                     }
-                    if ( candidateIsNeighbor )
-                        targetCell->_neighbor[ curDim ].insert( *it );
+                    if ( candidateIsAttached )
+                    {
+                        targetCell->_attachedCell[curDim].insert(*it);
+                        (*it)->_attachedCell[ _dim ].insert( targetCell );
+                    }
                 }
             }
             else
             {
                 // ( targetCell->_dim == curDim )
-                // targetCell and candidate neighbor must share a face
+                // targetCell and candidate attached cell must share a face
                 int nFaces = analysisModel().meshReader().giveNumberOfFacesForElementType( targetCell->_elType );
+                targetCell->_neighbor.assign( nFaces, nullptr );
+
                 for ( int curFace = 0; curFace < nFaces; curFace++ )
                 {
                     std::vector<int> faceNodes = analysisModel().meshReader().giveFaceNodeNumbersForElementType( targetCell->_elType, curFace );
@@ -663,21 +489,20 @@ void DomainManager::findNeighborsOf( Cell* targetCell )
                     {
                         std::vector<Node*> candNode = this->giveNodesOf( *it );
 
-                        bool isNeighbor = true;
-                        // TODO: Why does k start from 1 and not 0?
-                        for ( int k = 1; k < (int)faceNodes.size(); k++ )
+                        bool candidateIsAttached = true;
+                        for ( int k = 0; k < (int)faceNodes.size(); k++ )
                         {
-                            bool hasFaceNode = false;
+                            bool sharesFaceNode = false;
                             for ( int m = 0; m < (int)candNode.size(); m++ )
                                 if ( candNode[ m ] == targetCell->_node[ faceNodes[ k ] ] )
-                                    hasFaceNode = true;
+                                    sharesFaceNode = true;
 
-                            if ( !hasFaceNode )
+                            if ( !sharesFaceNode )
                                 isNeighbor = false;
                         }
 
                         if ( isNeighbor && (*it) != targetCell )
-                        targetCell->_neighbor[ curDim ].insert( *it );
+                        targetCell->_neighbor[ curFace ] = (*it);
                     }
                 }
             }
@@ -685,59 +510,10 @@ void DomainManager::findNeighborsOf( Cell* targetCell )
     }
 }
 // ----------------------------------------------------------------------------
-// void DomainManager::formDomainPartitions()
-// {
-//     // Determine number of partitions
-//     int nPartitions = 0;
-//     for ( int i = 0; i < (int)_domCell.size(); i++)
-//         if ( _domCell[ i ]->_partition > nPartitions )
-//             nPartitions = _domCell[ i ]->_partition;
-    
-//     // Count number of cells in each partition
-//     std::vector<int> partitionCellCount;
-//     partitionCellCount.assign( nPartitions + 1, 0 );
-//     for ( int i = 0; i < (int)_domCell.size(); i++ )
-//         partitionCellCount[ _domCell[ i ]->_partition ] += 1;
-    
-//     // Create cell address vector for each partition
-//     _partition.assign( nPartitions + 1, std::vector<Cell*>() );
-//     for ( int i = 0; i <= nPartitions; i++)
-//     {
-//         _partition[ i ].assign( partitionCellCount[ i ], nullptr );
-//         partitionCellCount[ i ] = 0;
-//     }
-    
-//     for ( int i = 0; i < (int)_domCell.size(); i++)
-//     {
-//         int cellPartition = _domCell[ i ]->_partition;
-//         _partition[ cellPartition ][ partitionCellCount[ cellPartition ]++ ] = _domCell[ i ];
-//     }
-// }
-// ----------------------------------------------------------------------------
-// Cell* DomainManager::giveBoundaryCell( int cellNum )
-// {
-//     return _bndCell[ cellNum ];
-// }
-// ----------------------------------------------------------------------------
 Dof* DomainManager::giveCellDof( int dofNum, Cell *targetCell )
 {
     return targetCell->_dof[ dofNum ];
 }
-// ----------------------------------------------------------------------------
-// Cell* DomainManager::giveDomainCell( int cellNum )
-// {
-//     return _domCell[ cellNum ];
-// }
-// ----------------------------------------------------------------------------
-// Cell* DomainManager::giveDomainCellInPartition( int partNum, int cellNum )
-// {
-//     return _partition[ partNum ][ cellNum ];
-// }
-// ----------------------------------------------------------------------------
-// std::vector<Cell*> DomainManager::giveDomainCellsAssociatedWith( Cell *targetCell )
-// {
-//     return targetCell->_assocDomCell;
-// }
 // ----------------------------------------------------------------------------
 int DomainManager::giveElementTypeOf( Cell* targetCell )
 {
@@ -764,30 +540,10 @@ std::vector<Node*> DomainManager::giveNodesOf( Cell *targetCell )
     return targetCell->_node;
 }
 // ----------------------------------------------------------------------------
-// int DomainManager::giveNumberOfBoundaryCells()
-// {
-//     return _bndCell.size();
-// }
-// ----------------------------------------------------------------------------
-// int DomainManager::giveNumberOfDomainCells()
-// { 
-//     return _domCell.size();
-// }
-// ----------------------------------------------------------------------------
-// int DomainManager::giveNumberOfDomainCellsInPartition( int partNum )
-// {
-//     return _partition[ partNum ].size();
-// }
-// ----------------------------------------------------------------------------
 int DomainManager::giveNumberOfNodesOf( Cell *targetCell )
 {
     return targetCell->_node.size();
 }
-// ----------------------------------------------------------------------------
-// int DomainManager::giveNumberOfPartitions()
-// {
-//     return _partition.size();
-// }
 // ----------------------------------------------------------------------------
 Numerics* DomainManager::giveNumericsFor( Cell* targetCell, int stage )
 {
@@ -947,9 +703,9 @@ void DomainManager::readNumberOfFieldsPerCellFrom( FILE* fp )
 void DomainManager::reorderNodesOf( Cell* targetCell, std::vector<int>& reordering )
 {
     int nNodes = (int)reordering.size();
-    std::vector<Node*> reorderedNode(nNodes, nullptr);
+    std::vector<Node*> reorderedNode( nNodes, nullptr );
     if ( nNodes != (int)targetCell->_node.size() )
-        throw std::runtime_error("ERROR: Number of original and reordered cell nodes do not match!\nSource: DomainManager");
+        throw std::runtime_error( "ERROR: Number of original and reordered cell nodes don't match!\nSource: " + _name );
     else
         for ( int i = 0; i < nNodes; i++ )
             reorderedNode[ i ] = targetCell->_node[ reordering[ i ] ];
@@ -957,7 +713,7 @@ void DomainManager::reorderNodesOf( Cell* targetCell, std::vector<int>& reorderi
     targetCell->_node = reorderedNode; 
 
     // Note: Implementation is incomplete in the sense that boundary associations, etc. also have to be
-    // updated (which is currently node done).
+    // updated (which is currently not done).
 }
 // ----------------------------------------------------------------------------
 void DomainManager::reportDetailedStatus()
@@ -965,7 +721,7 @@ void DomainManager::reportDetailedStatus()
     this->reportStatus();
     
     std::printf( "\n" );
-    for ( int i = 0; i < (int)this->_node.size(); i++ )
+    for ( int i = 0; i < (int)_node.size(); i++ )
     {
         RealVector coor = _node[ i ]->_coordinates;
         std::printf( "    node %d: x = %e, y = %e, z = %e, dofs = ", i, coor( 0 ), coor( 1 ), coor( 2 ) );
@@ -973,44 +729,54 @@ void DomainManager::reportDetailedStatus()
             std::printf("%d ", analysisModel().dofManager().giveEquationNumberAt( _node[ i ]->_dof[ j ] ) );
         std::printf( "\n" );
     }
-    
-    // for ( int i = 0; i < (int)this->_domCell.size(); i++ )
-    // {
-    //     std::vector<Node*> node = _domCell[i]->_node;
-    //     std::printf( "    cell %d: nodes = ", i );
-    //     for ( int j = 0; j < (int)node.size(); j++ )
-    //         std::printf( "%d ", node[ j ]->_id );
-    //     std::printf( ", dofs = " );
-    //     for ( int j = 0; j < (int)_domCell[i]->_dof.size(); j++ )
-    //         std::printf( "%d ", analysisModel().dofManager().giveEquationNumberAt( _domCell[ i ]->_dof[ j ] ) );
-    //     std::printf( ", neighbors = " );
-    //     for ( int j = 0; j < (int)_domCell[i]->_neighbor.size(); j++ )
-    //         if ( _domCell[ i ]->_neighbor[ j ] )
-    //             std::printf( "%d ", _domCell[i]->_neighbor[ j ]->_id );
-    //     std::printf( "\n" );
-    // }
+
+    for ( int dim = 0; dim < 4; dim++ )
+    {
+        for ( int i = 0; i < (int)_cell[ dim ].size(); i++ )
+        {
+            Cell* curCell = _cell[dim][i];
+            std::printf( "   cell %d: dim = %d, nodes = ", curCell->_id, dim );
+            std::vector < Node * > node = curCell->_node;
+            for ( int j = 0; j < (int)node.size(); j++ )
+                std::printf( "%d ", node[j]->_id );
+
+            int nDofs = curCell->_dof.size();
+            if ( nDofs > 0 )
+            {
+                std::printf( ", dofs = " );
+                for ( int j = 0; j < nDofs; j++ )
+                    std::printf( "%d ", analysisModel().dofManager().giveEquationNumberAt( curCell->_dof[ j ] ) );
+            }
+
+            int nNeighbors = curCell->_neighbor.size();
+            if ( nNeighbors > 0 )
+            {
+                std::printf( ", neighbors = " );
+                for ( int j = 0; j < (int)curCell->_neighbor.size(); j++ )
+                    if ( curCell->_neighbor[ j ] )
+                        std::printf( "%d ", curCell->_neighbor[ j ]->_id);
+                    else
+                        std::printf( "null ", );
+            }
+
+            std::printf("\n");
+        }
+    }
 }
 // ----------------------------------------------------------------------------
 void DomainManager::reportStatus()
 {
     std::printf( "    Nodes          = %ld\n", _node.size() );
-    // std::printf( "    Domain cells   = %ld\n", _domCell.size() );
-    // std::printf( "    Boundary cells = %ld\n\n", _bndCell.size() );
-
-    // std::printf( "    Number of domain partitions = %ld\n", _partition.size() );
-    // for ( int i = 0; i < (int)_partition.size(); i++ )
-    //     std::printf( "      Cells in partition # %2d = %ld\n", i, _partition[ i ].size() );
+    std::printf( "    3-D cells      = %ld\n", _cell[ 3 ].size() );
+    std::printf( "    2-D cells      = %ld\n", _cell[ 2 ].size() );
+    std::printf( "    1-D cells      = %ld\n", _cell[ 1 ].size() );
+    std::printf( "    0-D cells      = %ld\n", _cell[ 0 ].size() );
 }
 // ----------------------------------------------------------------------------
 void DomainManager::setElementTypeOf( Cell* targetCell, int elemType )
 {
     targetCell->_elType = elemType;
 }
-// ----------------------------------------------------------------------------
-// void DomainManager::setHaloOf(Cell *targetCell, std::vector<int>& halo )
-// {
-//     targetCell->_halo = halo;
-// }
 // ----------------------------------------------------------------------------
 void DomainManager::setNeighborsOf( Cell *targetCell, std::set<Cell*>& neighbors, int dim )
 {
@@ -1028,16 +794,7 @@ void DomainManager::setNodesOf( Cell *targetCell, std::vector<int>& cellNodes )
     {
         node[ i ] = _node[ cellNodes[ i ] ];
         node[ i ]->_attachedCell[ targetCell->_dim ].insert( targetCell );
-        // if ( targetCell->_isPartOfDomain )
-        //     node[ i ]->_attachedDomCell.insert( targetCell );
-        // else
-        //     node[ i ]->_attachedBndCell.insert( targetCell );
     }
     
     targetCell->_node = node;
 }
-// ----------------------------------------------------------------------------
-// void DomainManager::setPartitionOf( Cell* targetCell, int partition )
-// {
-//     targetCell->_partition = partition;
-// }
