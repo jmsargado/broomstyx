@@ -24,6 +24,7 @@
 
 #include <cstdio>
 #include <cstdlib>
+#include <set>
 #include <vector>
 #include "Math/RealVector.hpp"
 
@@ -63,17 +64,11 @@ namespace broomstyx
         int _id;
         int _partition;
 
-//         bool _isPartOfDomain;
+        std::vector<bool>  _hasNumericsAtStage;
         std::vector<Node*> _node;
         std::vector<Dof*>  _dof;
-        std::set<Cell*> _neighbor[4];
-
-        // std::vector<Cell*> _face;
-        // std::vector<int>   _faceOrient;
-        
-        // Used by boundary cells
-        // std::vector<Cell*> _assocDomCell;
-//         std::vector<int> _halo;
+        std::set<Cell*>    _attachedCell[4];
+        std::vector<Cell*> _neighbor;
     };
 }
 
