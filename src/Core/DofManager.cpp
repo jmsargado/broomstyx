@@ -38,8 +38,10 @@ DofManager::DofManager()
 {
     _name = "DofManager";
     _multiFreedomConstraint.clear();
-    _cellDofInfo.clear();
-    _faceDofInfo.clear();
+    _cellDofInfo[ 0 ].clear();
+    _cellDofInfo[ 1 ].clear();
+    _cellDofInfo[ 2 ].clear();
+    _cellDofInfo[ 3 ].clear();
     _nodalDofInfo.clear();
     _numericsDof.assign( 0, nullptr );
 }
@@ -57,10 +59,11 @@ DofManager::~DofManager() {}
 // ----------------------------------------------------------------------------
 void DofManager::createCellDofsAt( Cell* targetCell )
 {
-    int dofsPerCell = _cellDofInfo.size();
-    targetCell->_dof.assign( dofsPerCell, nullptr );
-    for ( int i = 0; i < dofsPerCell; i++ )
-        targetCell->_dof[ i ] = new Dof( _cellDofInfo[ i ].group );
+    int dim = targetCell->_dim;
+    int nDofs = _cellDofInfo[ dim ].size();
+    targetCell->_dof.assign( nDofs, nullptr );
+    for ( int i = 0; i < nDofs; i++ )
+        targetCell->_dof[ i ] = new Dof( _cellDofInfo[ dim ][ i ].group );
 }
 //// ----------------------------------------------------------------------------
 ////void DofManager::createFaceDofsAt( Cell* targetFace )
@@ -89,7 +92,8 @@ void DofManager::createNodalDofsAt( Node* targetNode )
 // ----------------------------------------------------------------------------
 void DofManager::destroyCellDofsAt( Cell* targetCell )
 {
-    for ( int i = 0; i < (int)_cellDofInfo.size(); i++ )
+    int nDofs = targetCell->_dof.size();
+    for ( int i = 0; i < nDofs; i++ )
         if ( targetCell->_dof[ i ] )
         {
             delete targetCell->_dof[ i ];
@@ -109,7 +113,8 @@ void DofManager::destroyCellDofsAt( Cell* targetCell )
 // ----------------------------------------------------------------------------
 void DofManager::destroyNodalDofsAt( Node* targetNode )
 {
-    for ( int i = 0; i < (int)_nodalDofInfo.size(); i++ )
+    int nDofs = targetNode->_dof.size();
+    for ( int i = 0; i < nDofs; i++ )
         if ( targetNode->_dof[ i ] )
         {
             delete targetNode->_dof[ i ];
@@ -302,11 +307,12 @@ void DofManager::enslave( Dof* targetDof, Dof* masterDof )
 int DofManager::giveIndexForCellDof( const std::string& name )
 {
     int index = -1;
-    for ( int i = 0; i < (int)_cellDofInfo.size(); i++ )
-    {
-        if ( _cellDofInfo[ i ].tag == name )
-            index = i;
-    }
+    for ( int dim = 0; dim < 4; dim++ )
+        for ( int i = 0; i < (int)_cellDofInfo[ dim ].size(); i++ )
+        {
+            if ( _cellDofInfo[ dim ][ i ].tag == name )
+                index = i;
+        }
     if ( index < 0 )
         throw std::runtime_error( "ERROR: Cannot give DOF index. Cell DOF '" + name + "' not recognized!\n" );
 
@@ -428,20 +434,28 @@ void DofManager::imposeMultiFreedomConstraints()
 // ----------------------------------------------------------------------------
 void DofManager::readCellDofsFrom( FILE* fp )
 {
-    // Read number of elemental DOFs
-    int nDofsPerCell = getIntegerInputFrom( fp, "\nFailed to read number of DOF per cell from input file!", _name );
+    // Read number of cell DOFs
+    int nCellDofs = getIntegerInputFrom( fp, "\nFailed to read number of DOF per cell from input file!", _name );
 
     // Setup cell DOF info
-    _cellDofInfo.assign( nDofsPerCell, DofInfo() );
-
-    for ( int i = 0; i < nDofsPerCell; i++ )
+    for ( int i = 0; i < nCellDofs; i++ )
     {
+        DofInfo info;
+
         // Cell DOF tag
-        _cellDofInfo[ i ].tag = getStringInputFrom( fp, "Failed to read cell DOF tag from input file!", _name );
+        info.tag = getStringInputFrom( fp, "Failed to read cell DOF tag from input file!", _name );
+
+        // Cell dimension
+        info.dim = getIntegerInputFrom( fp, "Failed to read cell dimension from input file!", _name );
+        if ( info.dim < 0 || info.dim > 3 )
+            throw std::runtime_error("ERROR: Invalid value '" + std::to_string( info.dim ) +
+                "' encountered in input file!\nSource: " + _name );
 
         // Cell DOF group
         verifyKeyword( fp, "DofGroup", _name );
-        _cellDofInfo[ i ].group = getIntegerInputFrom( fp, "Failed to read cell DOF group from input file!", _name );
+        info.group = getIntegerInputFrom( fp, "Failed to read cell DOF group from input file!", _name );
+
+        _cellDofInfo[ info.dim ].push_back( info );
     }
 }
 //// ----------------------------------------------------------------------------
@@ -493,27 +507,26 @@ void DofManager::readMultiFreedomConstraintsFrom( FILE* fp )
 // ----------------------------------------------------------------------------
 void DofManager::readNodalDofsFrom( FILE* fp )
 {
-    std::string key, errmsg, src = "DofManager";
-
     // Read number of DOF per node
-    int nDofsPerNode = getIntegerInputFrom( fp, "\nFailed to read number of DOF per node from input file!", src );
+    int nNodalDofs = getIntegerInputFrom( fp, "\nFailed to read number of DOF per node from input file!", _name );
 
     // Setup nodal DOF info
-    _nodalDofInfo.assign( nDofsPerNode, DofInfo() );
+    _nodalDofInfo.assign( nNodalDofs, DofInfo() );
 
-    for (  int i = 0; i < nDofsPerNode; i++ )
+    for (  int i = 0; i < nNodalDofs; i++ )
     {
         // Nodal DOF tag
-        _nodalDofInfo[ i ].tag = getStringInputFrom( fp, "\nFailed to read nodal DOF tag from input file!", src );
+        _nodalDofInfo[ i ].dim = 0;
+        _nodalDofInfo[ i ].tag = getStringInputFrom( fp, "\nFailed to read nodal DOF tag from input file!", _name );
 
         // Nodal DOF group
-        verifyKeyword( fp, key = "DofGroup", src );
-        _nodalDofInfo[ i ].group = getIntegerInputFrom( fp, "\nFailed to read nodal DOF group from input file!", src );
+        verifyKeyword( fp, "DofGroup", _name );
+        _nodalDofInfo[ i ].group = getIntegerInputFrom( fp, "\nFailed to read nodal DOF group from input file!", _name );
 
         // Nodal dof primary and secondary field assignment
-        verifyKeyword( fp, key = "NodalField", src );
-        _nodalDofInfo[ i ].primField = getIntegerInputFrom( fp, "\nFailed to read primary field assignment for\nnodal DOF from input file!", src );
-        _nodalDofInfo[ i ].secField = getIntegerInputFrom( fp, "Failed reading secondary field assignment for\nnodal DOF from input file!", src );
+        verifyKeyword( fp, "NodalField", _name );
+        _nodalDofInfo[ i ].primField = getIntegerInputFrom( fp, "\nFailed to read primary field assignment for\nnodal DOF from input file!", _name );
+        _nodalDofInfo[ i ].secField = getIntegerInputFrom( fp, "Failed reading secondary field assignment for\nnodal DOF from input file!", _name );
     }
 }
 //// ----------------------------------------------------------------------------

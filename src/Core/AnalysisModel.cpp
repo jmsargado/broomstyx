@@ -190,14 +190,12 @@ void AnalysisModel::readInputFile()
     do {
         decl = getDeclarationFrom(fp);
 
-        if ( decl == "CSV_OUTPUT" )
-            _outputManager->readDataForCSVOutputFrom(fp);
-        else if ( decl == "DOF_PER_CELL" )
+        if ( decl == "CELL_DOFS" )
             _dofManager->readCellDofsFrom(fp);
+        else if ( decl == "CSV_OUTPUT" )
+            _outputManager->readDataForCSVOutputFrom(fp);
 //        else if ( decl == "DOF_PER_FACE" )
 //            _dofManager->readFaceDofsFrom(fp);
-        else if ( decl == "DOF_PER_NODE" )
-            _dofManager->readNodalDofsFrom(fp);
         else if ( decl == "DOMAIN_ASSIGNMENTS" )
             _domainManager->readDomainAssignmentsFrom(fp);
         else if ( decl == "FIELDS_PER_CELL" )
@@ -218,6 +216,8 @@ void AnalysisModel::readInputFile()
             this->readMeshReaderFrom(fp);
         else if ( decl == "MULTIFREEDOM_CONSTRAINTS" )
             _dofManager->readMultiFreedomConstraintsFrom(fp);
+        else if ( decl == "NODAL_DOFS" )
+            _dofManager->readNodalDofsFrom(fp);
         else if ( decl == "NUMERICS" )
             _numericsManager->readNumericsFrom(fp);
         else if ( decl == "OUTPUT_FORMAT" )

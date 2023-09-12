@@ -102,6 +102,7 @@ namespace broomstyx
 
         struct DofInfo
         {
+            int dim;
             std::string tag;
             int group;
             int primField;
@@ -117,7 +118,7 @@ namespace broomstyx
             int         slaveDofNum;
         };
 
-        std::vector<DofInfo> _cellDofInfo;
+        std::vector<DofInfo> _cellDofInfo[ 4 ];
         std::vector<DofInfo> _faceDofInfo;
         std::vector<DofInfo> _nodalDofInfo;
         std::vector<Dof*> _numericsDof;
