@@ -66,7 +66,7 @@ namespace broomstyx
 //        void   destroyNumericsDof( Dof*& targetDof );
         void   enslave( Dof* targetDof, Dof* masterDof );
 //        void   finalizeDofPrimaryValues();
-//        void   findActiveDofs();
+        void   findActiveDofs();
 //        std::vector<Dof*> giveActiveDofsAtStage( int stg );
 //        int    giveGroupNumberFor( Dof* targetDof );
         int    giveIndexForCellDof( const std::string& name );
@@ -80,13 +80,13 @@ namespace broomstyx
 //        double giveValueOfSecondaryVariableAt( Dof* targetDof );
 //        double giveValueOfResidualAt( Dof* targetDof );
         void   imposeMultiFreedomConstraints();
-//        void   putDirichletConstraintOn( Dof* targetDof );
+        void   putDirichletConstraintOn( Dof* targetDof );
         void   readCellDofsFrom( FILE* fp );
 //        void   readFaceDofsFrom( FILE* fp );
         void   readMultiFreedomConstraintsFrom( FILE* fp );
         void   readNodalDofsFrom( FILE* fp );
-//        void   removeAllDofConstraints();
-//        void   reportNumberOfActiveDofs();
+        void   removeAllDofConstraints();
+        void   reportNumberOfActiveDofs();
 //        void   resetDofCurrentPrimaryValues();
 //        void   resetSecondaryVariablesAtStage( int stage );
 //        void   setConstraintValueAt( Dof* targetDof, double val );
@@ -123,10 +123,11 @@ namespace broomstyx
         std::vector<DofInfo> _nodalDofInfo;
         std::vector<Dof*> _numericsDof;
 
-        std::map< int, int > _nActiveDof;
-        std::map< int, int > _nInactiveDof;
-        std::map< int, std::vector<Dof*> > _activeDof;
-        std::map< int, std::vector<Dof*> > _inactiveDof;
+        std::vector<int> _nActiveDof;
+        std::vector<int> _nInactiveDof;
+        std::vector<std::vector<Dof*> > _activeDof;
+        std::vector<std::vector<Dof*> > _inactiveDof;
+
         std::vector<MultiFreedomConstraint> _multiFreedomConstraint;
         
         DofManager();

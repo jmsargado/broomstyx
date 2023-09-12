@@ -105,6 +105,7 @@ namespace broomstyx
         Cell* makeNewCell( int elType, int cellLabel, int dim );
         void  mustConstructFaces();
         void  readNumberOfFieldsPerCellFrom( FILE* fp );
+        void  removeAllCellConstraints();
         void  reorderNodesOf( Cell* targetCell, std::vector<int>& reordering );
         void  reportDetailedStatus();
         void  reportStatus();

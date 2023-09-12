@@ -652,6 +652,18 @@ void DomainManager::readNumberOfFieldsPerCellFrom( FILE* fp )
     _fieldsPerCell = getIntegerInputFrom( fp, "\nFailed to read number of fields per cell in input file!", "DomainManager" );
 }
 // ----------------------------------------------------------------------------
+void DomainManager::removeAllCellConstraints()
+{
+    for ( int dim = 0; dim < 4; dim++ )
+        for ( int i = 0; i < (int)_cell[ dim ].size(); i++ )
+            for ( int stage = 1; stage <= _nStage; stage++ )
+            {
+                Numerics *numerics = analysisModel().domainManager().giveNumericsForDomain( _cell[ dim ][ i ]->_label, stage );
+                if ( numerics )
+                    numerics->removeConstraintsOn( _cell[ dim ][ i ] );
+            }
+}
+// ----------------------------------------------------------------------------
 void DomainManager::reorderNodesOf( Cell* targetCell, std::vector<int>& reordering )
 {
     int nNodes = (int)reordering.size();

@@ -39,7 +39,7 @@ namespace broomstyx
     class LoadStep final
     {
     public:
-        LoadStep( int lsNum, int nStg );
+        LoadStep( int lsNum, int nStages );
         virtual ~LoadStep();
         
         // Disable copy constructor and assignment operator
@@ -60,7 +60,7 @@ namespace broomstyx
         };
         
         int    _loadStepNum;
-        int    _nStages;
+        int    _nStage;
         int    _maxSubsteps;
 
         TimeData _time;
@@ -81,8 +81,8 @@ namespace broomstyx
         std::vector<FILE*> _iterDatFile;
         std::vector<int>   _iterDatCount;
 
-        void findConstrainedDofs();
-        void performPrefinalCalculationsAtCells();
+        void findConstrainedDofsAtStage( int stage );
+//        void performPrefinalCalculationsAtCells();
     };
 }
 

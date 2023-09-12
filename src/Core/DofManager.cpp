@@ -182,114 +182,121 @@ void DofManager::enslave( Dof* targetDof, Dof* masterDof )
 //        _numericsDof[ i ]->_primVarConverged = _numericsDof[ i ]->_primVarCurrent;
 //    }
 //}
-//// ----------------------------------------------------------------------------
-//void DofManager::findActiveDofs()
-//{
+// ----------------------------------------------------------------------------
+void DofManager::findActiveDofs()
+{
+    auto nStage = analysisModel().solutionManager().giveNumberOfStages();
 //    auto registeredStages = analysisModel().solutionManager().giveRegisteredSolutionStages();
-//
-//    // First pass: determine number of active dofs at each stage
+
+    // First pass: determine number of active dofs at each stage
+    _nActiveDof.assign( nStage + 1, 0 );
+    _nInactiveDof.assign( nStage + 1, 0 );
+
 //    _nActiveDof.erase(_nActiveDof.begin(), _nActiveDof.end());
 //    _nInactiveDof.erase(_nInactiveDof.begin(), _nInactiveDof.end());
-//
+
 //    for ( auto curStage : registeredStages )
 //    {
 //        _nActiveDof.insert({curStage, 0});
 //        _nInactiveDof.insert({curStage, 0});
 //    }
-//
-//    int nNodes = analysisModel().domainManager().giveNumberOfNodes();
-//    int nCells = analysisModel().domainManager().giveNumberOfDomainCells();
-//
-//    for ( int i = 0; i < nNodes; i++ )
-//    {
-//        Node* curNode = analysisModel().domainManager().giveNode(i);
-//        for ( int j = 0; j < (int)_nodalDofInfo.size(); j++ )
-//        {
-//            Dof* curDof = analysisModel().domainManager().giveNodalDof( j, curNode );
-//            if ( !curDof->_isConstrained && !curDof->_isSlave && curDof->_stage != UNASSIGNED )
-//                _nActiveDof[ curDof->_stage ]++;
-//            else if ( curDof->_stage != UNASSIGNED )
-//                _nInactiveDof[ curDof->_stage ]++;
-//        }
-//    }
-//
-//    for ( int i = 0; i < nCells; i++ )
-//    {
-//        Cell* curCell = analysisModel().domainManager().giveDomainCell( i );
-//        for ( int j = 0; j < (int)_cellDofInfo.size(); j++ )
-//        {
-//            Dof* curDof = analysisModel().domainManager().giveCellDof( j, curCell );
-//            if ( !curDof->_isConstrained && !curDof->_isSlave && curDof->_stage != UNASSIGNED )
-//                _nActiveDof[ curDof->_stage ]++;
-//            else if ( curDof->_stage != UNASSIGNED )
-//                _nInactiveDof[ curDof->_stage ]++;
-//        }
-//    }
-//
-//    // TODO: Include face DOFs
-//
-//    for ( int i = 0; i < (int)_numericsDof.size(); i++ )
-//    {
-//        Dof* curDof = _numericsDof[i];
-//        if ( !curDof->_isConstrained && !curDof->_isSlave && curDof->_stage != UNASSIGNED )
-//            _nActiveDof[ curDof->_stage ]++;
-//        else if ( curDof->_stage != UNASSIGNED )
-//            _nInactiveDof[ curDof->_stage ]++;
-//    }
-//
-//    // 2nd pass: for vectors of Dof pointers
-//    _activeDof.erase(_activeDof.begin(), _activeDof.end());
-//    _inactiveDof.erase(_inactiveDof.begin(), _inactiveDof.end());
-//    for ( auto curStage : registeredStages )
-//    {
-//        _activeDof.insert({curStage, std::vector<Dof*>(_nActiveDof[curStage])});
-//        _inactiveDof.insert({curStage, std::vector<Dof*>(_nInactiveDof[curStage])});
-//    }
-//
-//    for ( auto curStage : registeredStages )
-//    {
-//        int curActiveIdx = 0;
-//        int curInactiveIdx = 0;
-//        for ( int i = 0; i < nNodes; i++ )
-//        {
-//            Node* targetNode = analysisModel().domainManager().giveNode( i );
-//
-//            for ( int j = 0; j < (int)_nodalDofInfo.size(); j++ )
-//            {
-//                Dof* targetDof = analysisModel().domainManager().giveNodalDof( j, targetNode );
-//                if ( targetDof->_stage == curStage && !targetDof->_isConstrained && !targetDof->_isSlave )
-//                    _activeDof[ curStage ][ curActiveIdx++ ] = targetDof;
-//                else if ( targetDof->_stage == curStage )
-//                    _inactiveDof[ curStage ][ curInactiveIdx++ ] = targetDof;
-//            }
-//        }
-//
-//        for ( int i = 0; i < nCells; i++ )
-//        {
-//            Cell* targetCell = analysisModel().domainManager().giveDomainCell( i );
-//
-//            for ( int j = 0; j < (int)_cellDofInfo.size(); j++ )
-//            {
-//                Dof* targetDof = analysisModel().domainManager().giveCellDof( j, targetCell );
-//                if ( targetDof->_stage == curStage && !targetDof->_isConstrained && !targetDof->_isSlave )
-//                    _activeDof[ curStage ][ curActiveIdx++ ] = targetDof;
-//                else if ( targetDof->_stage == curStage )
-//                    _inactiveDof[ curStage ][ curInactiveIdx++ ] = targetDof;
-//            }
-//        }
-//
-//        // TODO: Include face DOFs
-//
-//        for ( int i = 0; i < (int)_numericsDof.size(); i++ )
-//        {
-//            Dof* targetDof = _numericsDof[i];
-//            if ( targetDof->_stage == curStage && !targetDof->_isConstrained && !targetDof->_isSlave )
-//                _activeDof[ curStage ][ curActiveIdx++ ] = targetDof;
-//            else if ( targetDof->_stage == curStage )
-//                    _inactiveDof[ curStage ][ curInactiveIdx++ ] = targetDof;
-//        }
-//    }
-//}
+
+    int nNodes = analysisModel().domainManager().giveNumberOfNodes();
+    for ( int i = 0; i < nNodes; i++ )
+    {
+        Node* curNode = analysisModel().domainManager().giveNode( i );
+        for ( int j = 0; j < (int)_nodalDofInfo.size(); j++ )
+        {
+            Dof* curDof = analysisModel().domainManager().giveNodalDof( j, curNode );
+            if ( !curDof->_isConstrained && !curDof->_isSlave && curDof->_stage != UNASSIGNED )
+                _nActiveDof[ curDof->_stage ]++;
+            else if ( curDof->_stage != UNASSIGNED )
+                _nInactiveDof[ curDof->_stage ]++;
+        }
+    }
+
+    for ( int dim = 0; dim < 4; dim++ )
+    {
+        int nCells = analysisModel().domainManager().giveNumberOfCellsWithDimension( dim );
+        for ( int i = 0; i < nCells; i++ )
+        {
+            Cell *curCell = analysisModel().domainManager().giveCell( i, dim );
+            for ( int j = 0; j < (int) _cellDofInfo[dim].size(); j++ )
+            {
+                Dof *curDof = analysisModel().domainManager().giveCellDof( j, curCell );
+                if ( !curDof->_isConstrained && !curDof->_isSlave && curDof->_stage != UNASSIGNED )
+                    _nActiveDof[ curDof->_stage ]++;
+                else if ( curDof->_stage != UNASSIGNED )
+                    _nInactiveDof[ curDof->_stage ]++;
+            }
+        }
+    }
+
+    for ( int i = 0; i < (int)_numericsDof.size(); i++ )
+    {
+        Dof* curDof = _numericsDof[i];
+        if ( !curDof->_isConstrained && !curDof->_isSlave && curDof->_stage != UNASSIGNED )
+            _nActiveDof[ curDof->_stage ]++;
+        else if ( curDof->_stage != UNASSIGNED )
+            _nInactiveDof[ curDof->_stage ]++;
+    }
+
+    _activeDof.assign( nStage, std::vector<Dof*>() );
+    _inactiveDof.assign( nStage, std::vector<Dof*>() );
+
+    // 2nd pass: for vectors of Dof pointers
+    for ( int stage = 1; stage <= nStage; stage++ )
+    {
+        _activeDof[ stage ].assign( _nActiveDof[ stage ], nullptr );
+        _inactiveDof[ stage ].assign( _nActiveDof[ stage ], nullptr );
+    }
+
+    for ( int curStage = 1; curStage <= nStage; curStage++ )
+    {
+        int curActiveIdx = 0;
+        int curInactiveIdx = 0;
+        for ( int i = 0; i < nNodes; i++ )
+        {
+            Node* targetNode = analysisModel().domainManager().giveNode( i );
+
+            for ( int j = 0; j < (int)_nodalDofInfo.size(); j++ )
+            {
+                Dof* targetDof = analysisModel().domainManager().giveNodalDof( j, targetNode );
+                if ( targetDof->_stage == curStage && !targetDof->_isConstrained && !targetDof->_isSlave )
+                    _activeDof[ curStage ][ curActiveIdx++ ] = targetDof;
+                else if ( targetDof->_stage == curStage )
+                    _inactiveDof[ curStage ][ curInactiveIdx++ ] = targetDof;
+            }
+        }
+
+        for ( int dim = 0; dim < 4; dim++ )
+        {
+            int nCells = analysisModel().domainManager().giveNumberOfCellsWithDimension( dim );
+            for ( int i = 0; i < nCells; i++ )
+            {
+                Cell* targetCell = analysisModel().domainManager().giveCell( i, dim );
+
+                for ( int j = 0; j < (int)_cellDofInfo[ dim ].size(); j++ )
+                {
+                    Dof* targetDof = analysisModel().domainManager().giveCellDof( j, targetCell );
+                    if ( targetDof->_stage == curStage && !targetDof->_isConstrained && !targetDof->_isSlave )
+                        _activeDof[ curStage ][ curActiveIdx++ ] = targetDof;
+                    else if ( targetDof->_stage == curStage )
+                        _inactiveDof[ curStage ][ curInactiveIdx++ ] = targetDof;
+                }
+            }
+        }
+
+        for ( int i = 0; i < (int)_numericsDof.size(); i++ )
+        {
+            Dof* targetDof = _numericsDof[i];
+            if ( targetDof->_stage == curStage && !targetDof->_isConstrained && !targetDof->_isSlave )
+                _activeDof[ curStage ][ curActiveIdx++ ] = targetDof;
+            else if ( targetDof->_stage == curStage )
+                _inactiveDof[ curStage ][ curInactiveIdx++ ] = targetDof;
+        }
+    }
+}
 //// ----------------------------------------------------------------------------
 //std::vector<Dof*> DofManager::giveActiveDofsAtStage( int stg )
 //{
@@ -425,12 +432,12 @@ void DofManager::imposeMultiFreedomConstraints()
             throw std::runtime_error( "ERROR: Unimplemented multi-freedom constraint type!\nSource: " + _name );
     }
 }
-//// ----------------------------------------------------------------------------
-//void DofManager::putDirichletConstraintOn( Dof* targetDof )
-//{
-//    targetDof->_isConstrained = true;
-//    targetDof->_eqNo = UNASSIGNED;
-//}
+// ----------------------------------------------------------------------------
+void DofManager::putDirichletConstraintOn( Dof* targetDof )
+{
+    targetDof->_isConstrained = true;
+    targetDof->_eqNo = UNASSIGNED;
+}
 // ----------------------------------------------------------------------------
 void DofManager::readCellDofsFrom( FILE* fp )
 {
@@ -529,50 +536,48 @@ void DofManager::readNodalDofsFrom( FILE* fp )
         _nodalDofInfo[ i ].secField = getIntegerInputFrom( fp, "Failed reading secondary field assignment for\nnodal DOF from input file!", _name );
     }
 }
-//// ----------------------------------------------------------------------------
-//void DofManager::removeAllDofConstraints()
-//{
-//    // Cycle through all nodal DOFs
-//    int nNodes = analysisModel().domainManager().giveNumberOfNodes();
-//
-//    for ( int i = 0; i < nNodes; i++ )
-//    {
-//        Node* targetNode = analysisModel().domainManager().giveNode( i );
-//
-//        for ( int j = 0; j < (int)_nodalDofInfo.size(); j++ )
-//        {
-//            Dof* targetDof = analysisModel().domainManager().giveNodalDof( j, targetNode );
-//            targetDof->_isConstrained = false;
-//        }
-//    }
-//
-//    // Cycle through all cell DOFs
-//    int nCells = analysisModel().domainManager().giveNumberOfDomainCells();
-//
-//    for ( int i = 0; i < nCells; i++ )
-//    {
-//        Cell* targetCell = analysisModel().domainManager().giveDomainCell( i );
-//
-//        for ( int j = 0; j < (int)_cellDofInfo.size(); j++ )
-//        {
-//            Dof* targetDof = analysisModel().domainManager().giveCellDof( j, targetCell );
-//            targetDof->_isConstrained = false;
-//        }
-//    }
-//}
-//// ----------------------------------------------------------------------------
-//void DofManager::reportNumberOfActiveDofs()
-//{
-//    std::printf( "\n    Stage    Active DOFs" );
-//    std::printf( "\n    -----------------------" );
-//    for ( auto it = _nActiveDof.begin(); it != _nActiveDof.end(); ++it )
-//    {
-//        int stg = (*it).first;
-//        int nActiveDofs = (*it).second;
-//        std::printf( "\n    %-9d%d\n", stg, nActiveDofs );
-//    }
-//    std::printf( "\n" );
-//}
+// ----------------------------------------------------------------------------
+void DofManager::removeAllDofConstraints()
+{
+    // Cycle through all nodal DOFs
+    int nNodes = analysisModel().domainManager().giveNumberOfNodes();
+
+    for ( int i = 0; i < nNodes; i++ )
+    {
+        Node* targetNode = analysisModel().domainManager().giveNode( i );
+
+        for ( int j = 0; j < (int)_nodalDofInfo.size(); j++ )
+        {
+            Dof* targetDof = analysisModel().domainManager().giveNodalDof( j, targetNode );
+            targetDof->_isConstrained = false;
+        }
+    }
+
+    // Cycle through all cell DOFs
+    for ( int dim = 0; dim < 4; dim++ )
+    {
+        int nCells = analysisModel().domainManager().giveNumberOfCellsWithDimension( dim );
+        for ( int i = 0; i < nCells; i++ )
+        {
+            Cell *targetCell = analysisModel().domainManager().giveCell( i, dim );
+
+            for ( int j = 0; j < (int) _cellDofInfo[ dim ].size(); j++ )
+            {
+                Dof *targetDof = analysisModel().domainManager().giveCellDof( j, targetCell );
+                targetDof->_isConstrained = false;
+            }
+        }
+    }
+}
+// ----------------------------------------------------------------------------
+void DofManager::reportNumberOfActiveDofs()
+{
+    std::printf( "\n    Stage    Active DOFs" );
+    std::printf( "\n    -----------------------" );
+    for ( int curStage = 1; curStage <= (int)_nActiveDof.size(); curStage++ )
+        std::printf( "\n    %-9d%d\n", curStage, _nActiveDof[ curStage ] );
+    std::printf( "\n" );
+}
 //// ----------------------------------------------------------------------------
 //void DofManager::resetDofCurrentPrimaryValues()
 //{
