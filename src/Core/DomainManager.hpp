@@ -57,6 +57,7 @@ namespace broomstyx
         };
         
         void                   createPhysicalEntity( int dim, int number, std::string label );
+        int                    giveDimensionForPhysicalEntity( int n );
         PhysicalEntity         givePhysicalEntity( int n );
         std::vector<Material*> giveMaterialSetForDomain( int label, int stage );
         int                    giveNumberOfPhysicalNames();
@@ -88,15 +89,15 @@ namespace broomstyx
         void  finalizeCellDataAt( const TimeData& time, int stage );
         void  findCellAttachments();
         void  findCellsAttachedTo( Cell* targetCell );
+        Cell* giveCell( int num, int dim );
         Dof*  giveCellDof( int dofNum, Cell* targetCell );
         Cell* giveDomainCellInPartition( int partNum, int cellNum );
         int   giveElementTypeOf( Cell* targetCell );
         int   giveIdOf( Cell *targetCell );
         int   giveLabelOf( Cell *targetCell );
-        
-        std::set<Cell*> giveNeighborsOf( Cell* targetCell, int dim );
+        std::vector<Cell*> giveNeighborsOf( Cell* targetCell );
         std::vector<Node*> giveNodesOf( Cell* targetCell );
-        
+        int   giveNumberOfCellsWithDimension( int dim );
         int   giveNumberOfNodesOf( Cell* targetCell );
         Numerics* giveNumericsFor( Cell* targetCell, int stage );
         void  initializeMaterialsAtCells();
@@ -112,6 +113,7 @@ namespace broomstyx
 
     private:
         std::string _name;
+        int _nStage;
 
         std::vector<PhysicalEntity> _physEnt;
         

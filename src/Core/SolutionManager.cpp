@@ -100,7 +100,7 @@ LoadStep* SolutionManager::giveCurrentLoadStep()
     return _curLoadStep;
 }
 // ----------------------------------------------------------------------------
-int SolutionManager::giveNumberOfSolutionStages()
+int SolutionManager::giveNumberOfStages()
 {
     return _nStage;
 }
@@ -203,9 +203,8 @@ void SolutionManager::readLoadStepsFrom( FILE *fp )
         _loadStep[ i ]->readDataFrom( fp );
     }
 }
-----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 void SolutionManager::readNumberOfStagesFrom( FILE* fp )
 {
     _nStages = getIntegerInputFrom( fp, "Failed to read number of solution stages from input file.", _name );
-    analysisModel().domainManager().setNumberOfStagesTo( _nStages );
 }

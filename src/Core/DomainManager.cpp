@@ -164,6 +164,14 @@ int DomainManager::givePhysicalEntityNumberFor( std::string name )
 // ----------------------------------------------------------------------------
 void DomainManager::readDomainAssignmentsFrom( FILE* fp )
 {
+    // Get number of stages from SolutionManager and initialize maps
+    // for numerics and material sets
+    int nStages = analysisModel().solutionManager().giveNumberOfStages();
+
+    // Note: Stage numbers start from 1 (and not 0) so we allocate an extra element
+    _numerics.resize( nStages + 1 );
+    _materialSet.resize( nStages + 1 );
+
     int nAssign = getIntegerInputFrom( fp, "Failed to read number of domain assignments from input file!", _name );
     
     for ( int i = 0; i < nAssign; i++ )
@@ -214,10 +222,12 @@ void DomainManager::readDomainAssignmentsFrom( FILE* fp )
 // ----------------------------------------------------------------------------
 void DomainManager::setNumberOfStagesTo( int nStage )
 {
+    _nStage = nStage;
+
     // Initialize maps for numerics and material sets
     // Note: Stage numbers start from 1 (and not 0) so we allocate an extra element
-    _numerics.resize( nStages + 1 );
-    _materialSet.resize( nStages + 1 );
+    _numerics.resize( nStage + 1 );
+    _materialSet.resize( nStage + 1 );
 }
 
 // Methods involving node access
@@ -369,7 +379,7 @@ void DomainManager::countCells()
         int vecCount = 0;
         for ( auto it = _cellList[ dim ].begin(); it != _cellList[ dim ].end(); it++ )
         {
-            _cell[ vecCount++ ] = *it;
+            _cell[ dim ][ vecCount++ ] = *it;
             (*it)->_id = totCount++;
         }
     }
@@ -405,7 +415,7 @@ void DomainManager::findCellAttachments()
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
-         for ( int i = 0; i < (int) _domCell.size(); i++ )
+         for ( int i = 0; i < (int) _cell[ dim ].size(); i++ )
              this->findCellsAttachedTo( _cell[ dim ][ i ] );
      }
 
@@ -445,7 +455,7 @@ void DomainManager::findCellsAttachedTo( Cell* targetCell )
                     if ( candidateIsAttached )
                     {
                         targetCell->_attachedCell[ curDim ].insert( *it );
-                        (*it)->_attachedCell[ _dim ].insert( targetCell );
+                        (*it)->_attachedCell[ targetCell->_dim ].insert( targetCell );
                     }
                 }
             }
@@ -468,8 +478,8 @@ void DomainManager::findCellsAttachedTo( Cell* targetCell )
                     }
                     if ( candidateIsAttached )
                     {
-                        targetCell->_attachedCell[curDim].insert(*it);
-                        (*it)->_attachedCell[ _dim ].insert( targetCell );
+                        targetCell->_attachedCell[ curDim ].insert( *it );
+                        (*it)->_attachedCell[ targetCell->_dim ].insert( targetCell );
                     }
                 }
             }
@@ -496,16 +506,26 @@ void DomainManager::findCellsAttachedTo( Cell* targetCell )
                                     sharesFaceNode = true;
 
                             if ( !sharesFaceNode )
-                                isNeighbor = false;
+                                candidateIsAttached = false;
                         }
 
-                        if ( isNeighbor && (*it) != targetCell )
-                        targetCell->_neighbor[ curFace ] = (*it);
+                        if ( candidateIsAttached && (*it) != targetCell )
+                        {
+                            targetCell->_attachedCell[ curDim ].insert( *it );
+                            (*it)->_attachedCell[ curDim ].insert( targetCell );
+
+                            targetCell->_neighbor[ curFace ] = (*it);
+                        }
                     }
                 }
             }
         }
     }
+}
+// ----------------------------------------------------------------------------
+Cell* DomainManager::giveCell( int num, int dim )
+{
+    return _cell[ dim ][ num ];
 }
 // ----------------------------------------------------------------------------
 Dof* DomainManager::giveCellDof( int dofNum, Cell *targetCell )
@@ -528,14 +548,19 @@ int DomainManager::giveLabelOf( Cell *targetCell )
     return targetCell->_label;
 }
 // ----------------------------------------------------------------------------
-std::set<Cell*> DomainManager::giveNeighborsOf( Cell* targetCell, int dim )
+std::vector<Cell*> DomainManager::giveNeighborsOf( Cell* targetCell )
 {
-    return targetCell->_neighbor[ dim ];
+    return targetCell->_neighbor;
 }
 // ----------------------------------------------------------------------------
 std::vector<Node*> DomainManager::giveNodesOf( Cell *targetCell )
 {
     return targetCell->_node;
+}
+// ----------------------------------------------------------------------------
+int DomainManager::giveNumberOfCellsWithDimension( int dim )
+{
+    return (int)_cell[ dim ].size();
 }
 // ----------------------------------------------------------------------------
 int DomainManager::giveNumberOfNodesOf( Cell *targetCell )
@@ -564,7 +589,7 @@ void DomainManager::initializeMaterialsAtCells()
 #endif
         for ( int i = 0; i < (int)_cell[ dim ].size(); i++ )
         {
-            for ( int curStage = 1; curStage <= _nStages; curStage++ )
+            for ( int curStage = 1; curStage <= _nStage; curStage++ )
             {
                 Numerics* numerics = this->giveNumericsFor( _cell[ dim ][ i ], curStage );
                 if ( numerics )
@@ -594,7 +619,7 @@ void DomainManager::initializeNumericsAtCells()
 #endif
         for ( int i = 0; i < (int)_cell[ dim ].size(); i++ )
         {
-            for ( int curStage = 1; curStage <= _nStages; curStage++ )
+            for ( int curStage = 1; curStage <= _nStage; curStage++ )
             {
                 Numerics* numerics = this->giveNumericsFor( _cell[ dim ][ i ], curStage );
                 if ( numerics )
@@ -608,7 +633,7 @@ void DomainManager::initializeNumericsAtCells()
     std::printf( "done (time = %f sec.)\n", tictoc.count() );
 }
 // ----------------------------------------------------------------------------
-Cell* DomainManager::makeNewCell( int elType, int cellLabel, dim )
+Cell* DomainManager::makeNewCell( int elType, int cellLabel, int dim )
 {
     // Instantiate new cells
     Cell* newCell = new Cell( elType, cellLabel, dim );
@@ -683,7 +708,7 @@ void DomainManager::reportDetailedStatus()
                     if ( curCell->_neighbor[ j ] )
                         std::printf( "%d ", curCell->_neighbor[ j ]->_id);
                     else
-                        std::printf( "null ", );
+                        std::printf( "null " );
             }
 
             std::printf("\n");

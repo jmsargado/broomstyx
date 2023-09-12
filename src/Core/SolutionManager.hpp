@@ -47,7 +47,7 @@ namespace broomstyx
         
         void          commenceSolution();
         LoadStep*     giveCurrentLoadStep();
-        int           giveNumberOfSolutionStages();
+        int           giveNumberOfStages();
         void          imposeInitialConditions();
         UserFunction* makeNewUserFunction( std::string name );
         void          readInitialConditionsFrom( FILE* fp );

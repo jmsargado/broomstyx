@@ -103,14 +103,15 @@ void AnalysisModel::initializeYourself( std::string filename )
     else
         _meshReader->readMeshFile( _meshFilename );
 
-    // Find domain cell neighbors
-    _domainManager->findDomainCellNeighbors();
+    // Determine connectivity between cells
+    _domainManager->findCellAttachments();
+//    _domainManager->findDomainCellNeighbors();
 
     // Construct cell faces
-    _domainManager->constructCellFaces();
+//    _domainManager->constructCellFaces();
 
     // Find boundary cell associations
-    _domainManager->findBoundaryAssociations();
+//    _domainManager->findBoundaryAssociations();
 
     // Initialize numerics at cells
     _domainManager->initializeNumericsAtCells();
@@ -193,16 +194,16 @@ void AnalysisModel::readInputFile()
             _outputManager->readDataForCSVOutputFrom(fp);
         else if ( decl == "DOF_PER_CELL" )
             _dofManager->readCellDofsFrom(fp);
-        else if ( decl == "DOF_PER_FACE" )
-            _dofManager->readFaceDofsFrom(fp);
+//        else if ( decl == "DOF_PER_FACE" )
+//            _dofManager->readFaceDofsFrom(fp);
         else if ( decl == "DOF_PER_NODE" )
             _dofManager->readNodalDofsFrom(fp);
         else if ( decl == "DOMAIN_ASSIGNMENTS" )
             _domainManager->readDomainAssignmentsFrom(fp);
         else if ( decl == "FIELDS_PER_CELL" )
             _domainManager->readNumberOfFieldsPerCellFrom(fp);
-        else if ( decl == "FIELDS_PER_FACE" )
-            _domainManager->readNumberOfFieldsPerFaceFrom(fp);
+//        else if ( decl == "FIELDS_PER_FACE" )
+//            _domainManager->readNumberOfFieldsPerFaceFrom(fp);
         else if ( decl == "FIELDS_PER_NODE" )
             _domainManager->readNumberOfFieldsPerNodeFrom(fp);
         else if ( decl == "INITIAL_CONDITIONS" )

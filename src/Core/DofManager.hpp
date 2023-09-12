@@ -52,53 +52,54 @@ namespace broomstyx
         
     public:
         // Disable copy constructor and assignment operator
-        DofManager( const DofManager& ) = delete;
-        DofManager& operator=( const DofManager& ) = delete;
-        
-        void   addToSecondaryVariableAt( Dof* targetDof, double val );
+//        DofManager( const DofManager& ) = delete;
+//        DofManager& operator=( const DofManager& ) = delete;
+//
+//        void   addToSecondaryVariableAt( Dof* targetDof, double val );
         void   createCellDofsAt( Cell* targetCell );
-        void   createFaceDofsAt( Cell* targetFace );
+////        void   createFaceDofsAt( Cell* targetFace );
         void   createNodalDofsAt( Node* targetNode );
-        Dof*   createNumericsDofWithGroup( int grp );
+//        Dof*   createNumericsDofWithGroup( int grp );
         void   destroyCellDofsAt( Cell* targetCell );
-        void   destroyFaceDofsAt( Cell* targetFace );
+//        void   destroyFaceDofsAt( Cell* targetFace );
         void   destroyNodalDofsAt( Node* targetNode );
-        void   destroyNumericsDof( Dof*& targetDof );
+//        void   destroyNumericsDof( Dof*& targetDof );
         void   enslave( Dof* targetDof, Dof* masterDof );
-        void   finalizeDofPrimaryValues();
-        void   findActiveDofs();
-        std::vector<Dof*> 
-               giveActiveDofsAtStage( int stg );
-        int    giveGroupNumberFor( Dof* targetDof );
+//        void   finalizeDofPrimaryValues();
+//        void   findActiveDofs();
+//        std::vector<Dof*> giveActiveDofsAtStage( int stg );
+//        int    giveGroupNumberFor( Dof* targetDof );
         int    giveIndexForCellDof( const std::string& name );
-        int    giveIndexForFaceDof( const std::string& name );
+//        int    giveIndexForFaceDof( const std::string& name );
         int    giveIndexForNodalDof( const std::string& name );
         int    giveEquationNumberAt( Dof* targetDof );
-        int    giveNumberOfActiveDofsAtStage( int stgNum );
-        int    giveSubsystemNumberFor( Dof* targetDof );
-        double giveValueOfConstraintAt( Dof* targetDof, ValueType valType );
-        double giveValueOfPrimaryVariableAt( Dof* targetDof, ValueType valType );
-        double giveValueOfSecondaryVariableAt( Dof* targetDof );
-        double giveValueOfResidualAt( Dof* targetDof );
+//        int    giveNumberOfActiveDofsAtStage( int stgNum );
+//        int    giveSubsystemNumberFor( Dof* targetDof );
+//        double giveValueOfConstraintAt( Dof* targetDof, ValueType valType );
+//        double giveValueOfPrimaryVariableAt( Dof* targetDof, ValueType valType );
+//        double giveValueOfSecondaryVariableAt( Dof* targetDof );
+//        double giveValueOfResidualAt( Dof* targetDof );
         void   imposeMultiFreedomConstraints();
-        void   putDirichletConstraintOn( Dof* targetDof );
+//        void   putDirichletConstraintOn( Dof* targetDof );
         void   readCellDofsFrom( FILE* fp );
-        void   readFaceDofsFrom( FILE* fp );
+//        void   readFaceDofsFrom( FILE* fp );
         void   readMultiFreedomConstraintsFrom( FILE* fp );
         void   readNodalDofsFrom( FILE* fp );
-        void   removeAllDofConstraints();
-        void   reportNumberOfActiveDofs();
-        void   resetDofCurrentPrimaryValues();
-        void   resetSecondaryVariablesAtStage( int stage );
-        void   setConstraintValueAt( Dof* targetDof, double val );
-        void   setEquationNumberFor( Dof* targetDof, int eqNo );
-        void   setStageFor( Dof* targetDof, int stgNum );
-        void   setSubsystemFor( Dof* targetDof, int subsysNum );        
-        void   updatePrimaryVariableAt( Dof* targetDof, double val, ValueType valType );
-        void   updateResidualAt( Dof* targetDof, double val );
+//        void   removeAllDofConstraints();
+//        void   reportNumberOfActiveDofs();
+//        void   resetDofCurrentPrimaryValues();
+//        void   resetSecondaryVariablesAtStage( int stage );
+//        void   setConstraintValueAt( Dof* targetDof, double val );
+//        void   setEquationNumberFor( Dof* targetDof, int eqNo );
+//        void   setStageFor( Dof* targetDof, int stgNum );
+//        void   setSubsystemFor( Dof* targetDof, int subsysNum );
+//        void   updatePrimaryVariableAt( Dof* targetDof, double val, ValueType valType );
+//        void   updateResidualAt( Dof* targetDof, double val );
         void   writeConvergedDofValuesTo( Node* targetNode );
 
     private:
+        std::string _name;
+
         struct DofInfo
         {
             std::string tag;
