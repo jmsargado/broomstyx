@@ -221,7 +221,8 @@ void LoadStep::solveYourself()
     toc  = std::chrono::high_resolution_clock::now();
     tictoc = toc - tic;
     std::printf( "  Done initializing solvers                    (time = %f sec.)\n", tictoc.count() );
-    
+
+    // Load step proper
     std::printf( "\n  ------------------------" );
     std::printf( "\n    LOADSTEP # %d", _loadStepNum );
     std::printf( "\n  ------------------------\n" );
@@ -230,6 +231,7 @@ void LoadStep::solveYourself()
     analysisModel().dofManager().removeAllDofConstraints();
     analysisModel().domainManager().removeAllCellConstraints();
 
+    // Solve each stage in sequence
     for ( int curStage = 0; curStage < _nStage; curStage++ )
     {
         std::printf( "\n    Stage # %d", curStage );
@@ -251,7 +253,7 @@ void LoadStep::solveYourself()
                 Cell *curCell = analysisModel().domainManager().giveCell( iCell, dim );
                 int cellLabel = analysisModel().domainManager().giveLabelOf( curCell );
 
-                for ( int i = 0; i < (int) _preProcess.size(); i++ )
+                for ( int i = 0; i < (int)_preProcess.size(); i++ )
                 {
                     int domainLabel = analysisModel().domainManager().givePhysicalEntityNumberFor( _preProcess[ i ].domainTag );
                     if ( cellLabel == domainLabel) {
@@ -321,12 +323,9 @@ void LoadStep::solveYourself()
             std::printf( "\n  -----------------------------------------" );
             std::printf( "\n    LOADSTEP # %d, Substep # %d", _loadStepNum, curSubstep );
             std::printf( "\n  -----------------------------------------" );
-
             std::printf( "\n    Target time: %.14E\n", _time.giveTargetTime() );
 
             int nStage = analysisModel().solutionManager().giveNumberOfStages();
-
-            std::vector<bool> stageConverged( nStage, false );
 
             int curSubstepIter = 0;
             bool substepConverged = false;
@@ -338,10 +337,6 @@ void LoadStep::solveYourself()
 
                 std::printf( "\n    Substep Iter. # %d", curSubstepIter );
                 std::printf( "\n  -----------------------------------------\n" );
-
-//                for ( int curStage = 1; curStage <= nStage; curStage++) { // TODO: FIX THIS!
-//                    std::printf("\n    Stage # %d", curStage);
-//                    std::printf("\n  -------------------\n");
 
                 int error = _solutionMethod[ curStage ]->computeSolutionFor( curStage, _boundaryCondition, _fieldCondition, _time );
                 if ( error == 0 )
