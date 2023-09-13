@@ -202,9 +202,9 @@ void LoadStep::solveYourself()
     std::chrono::duration<double> tictoc;
     
     // Time data for immediate substep
-    _time.setCurrentTimeTo( _time.giveStartTime() );
     // Note: time.increment can be used to implement adaptive time-stepping
-    
+    _time.setCurrentTimeTo( _time.giveStartTime() );
+
     // Initialize solvers
     std::printf( "\n  %-40s\n", "Initializing solvers ..." );
     std::fflush( stdout );
@@ -554,19 +554,20 @@ void LoadStep::findConstrainedDofsAtStage( int stage )
     }
 }
 // -----------------------------------------------------------------------------
-//void LoadStep::performPrefinalCalculationsAtCells()
-//{
-//    int nCells = analysisModel().domainManager().giveNumberOfDomainCells();
-//
-//#ifdef _OPENMP
-//#pragma omp parallel for
-//#endif
-//    for ( int i = 0; i < nCells; i++ )
-//    {
-//        Cell* curCell = analysisModel().domainManager().giveDomainCell( i );
-//        int label = analysisModel().domainManager().giveLabelOf( curCell );
-//        Numerics* numerics = analysisModel().domainManager().giveNumericsForDomain( label );
-//
-//        numerics->performPrefinalizationCalculationsAt( curCell );
-//    }
-//}
+void LoadStep::performPrefinalCalculationsAtStage( int stage )
+{
+    for ( int dim = 0; dim < 4; dim++ )
+    {
+        int nCells = analysisModel().domainManager().giveNumberOfCellsWithDimension( dim );
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+        for ( int i = 0; i < nCells; i++ )
+        {
+            Cell *curCell = analysisModel().domainManager().giveCell( i, dim );
+            Numerics* numerics = analysisModel().domainManager().giveNumericsFor( targetCell, stage );
+            if ( numerics )
+                numerics->performPrefinalizationCalculationsAt( curCell );
+        }
+    }
+}

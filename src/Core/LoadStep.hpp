@@ -82,7 +82,7 @@ namespace broomstyx
         std::vector<int>   _iterDatCount;
 
         void findConstrainedDofsAtStage( int stage );
-//        void performPrefinalCalculationsAtCells();
+        void performPrefinalCalculationsAtStage( int stage );
     };
 }
 
