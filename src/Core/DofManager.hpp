@@ -65,7 +65,7 @@ namespace broomstyx
         void   destroyNodalDofsAt( Node* targetNode );
 //        void   destroyNumericsDof( Dof*& targetDof );
         void   enslave( Dof* targetDof, Dof* masterDof );
-//        void   finalizeDofPrimaryValues();
+        void   finalizeDofPrimaryValuesAtStage( int stage );
         void   findActiveDofs();
 //        std::vector<Dof*> giveActiveDofsAtStage( int stg );
 //        int    giveGroupNumberFor( Dof* targetDof );

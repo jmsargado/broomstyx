@@ -133,55 +133,65 @@ void DofManager::enslave( Dof* targetDof, Dof* masterDof )
     targetDof->_isSlave = true;
     targetDof->_masterDof = masterDof;
 }
-//// ----------------------------------------------------------------------------
-//void DofManager::finalizeDofPrimaryValues()
-//{
-//    int nNodes = analysisModel().domainManager().giveNumberOfNodes();
-//#ifdef _OPENMP
-//#pragma omp parallel for
-//#endif
-//    for (int i = 0; i < nNodes; i++)
-//    {
-//        Node* targetNode = analysisModel().domainManager().giveNode( i );
-//
-//        for ( int j = 0; j < (int)_nodalDofInfo.size(); j++ )
-//        {
-//            Dof* targetDof = analysisModel().domainManager().giveNodalDof( j, targetNode );
-//            if ( targetDof->_isSlave )
-//            {
-//                targetDof->_primVarConverged = targetDof->_masterDof->_primVarCurrent;
-//                targetDof->_primVarCurrent = targetDof->_masterDof->_primVarCurrent;
-//            }
-//            else
-//                targetDof->_primVarConverged = targetDof->_primVarCurrent;
-//        }
-//    }
-//
-//    int nCells = analysisModel().domainManager().giveNumberOfDomainCells();
-//#ifdef _OPENMP
-//#pragma omp parallel for
-//#endif
-//    for (int i = 0; i < nCells; i++)
-//    {
-//        Cell* targetCell = analysisModel().domainManager().giveDomainCell( i );
-//        for ( int j = 0; j < (int)_cellDofInfo.size(); j++ )
-//        {
-//            Dof* targetDof = analysisModel().domainManager().giveCellDof( j, targetCell );
-//            if ( targetDof->_isSlave )
-//            {
-//                targetDof->_primVarConverged = targetDof->_masterDof->_primVarConverged;
-//                targetDof->_primVarCurrent = targetDof->_masterDof->_primVarCurrent;
-//            }
-//            else
-//                targetDof->_primVarConverged = targetDof->_primVarCurrent;
-//        }
-//    }
-//
-//    for ( int i = 0; i < (int)_numericsDof.size(); i++ )
-//    {
-//        _numericsDof[ i ]->_primVarConverged = _numericsDof[ i ]->_primVarCurrent;
-//    }
-//}
+// ----------------------------------------------------------------------------
+void DofManager::finalizeDofPrimaryValuesAtStage( int stage )
+{
+    int nNodes = analysisModel().domainManager().giveNumberOfNodes();
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+    for ( int i = 0; i < nNodes; i++ )
+    {
+        Node* targetNode = analysisModel().domainManager().giveNode( i );
+
+        for ( int j = 0; j < (int)_nodalDofInfo.size(); j++ )
+        {
+            Dof *targetDof = analysisModel().domainManager().giveNodalDof(j, targetNode);
+            if ( targetDof->_stage == stage )
+            {
+                if ( targetDof->_isSlave )
+                {
+                    targetDof->_primVarConverged = targetDof->_masterDof->_primVarCurrent;
+                    targetDof->_primVarCurrent = targetDof->_masterDof->_primVarCurrent;
+                }
+                else
+                    targetDof->_primVarConverged = targetDof->_primVarCurrent;
+            }
+        }
+    }
+
+    for ( int dim = 0; dim < 4; dim++ )
+    {
+        int nCells = analysisModel().domainManager().giveNumberOfCellsWithDimension( dim );
+
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+        for ( int i = 0; i < nCells; i++ )
+        {
+            Cell *curCell = analysisModel().domainManager().giveCell( i, dim );
+            for ( int j = 0; j < (int) _cellDofInfo[ dim ].size(); j++)
+            {
+                Dof *targetDof = analysisModel().domainManager().giveCellDof( j, curCell );
+                if ( targetDof->_stage == stage )
+                {
+                    if ( targetDof->_isSlave )
+                    {
+                        targetDof->_primVarConverged = targetDof->_masterDof->_primVarConverged;
+                        targetDof->_primVarCurrent = targetDof->_masterDof->_primVarCurrent;
+                    }
+                    else
+                        targetDof->_primVarConverged = targetDof->_primVarCurrent;
+                }
+            }
+        }
+    }
+
+    for ( int i = 0; i < (int)_numericsDof.size(); i++ )
+    {
+        _numericsDof[ i ]->_primVarConverged = _numericsDof[ i ]->_primVarCurrent;
+    }
+}
 // ----------------------------------------------------------------------------
 void DofManager::findActiveDofs()
 {
