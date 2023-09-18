@@ -32,20 +32,23 @@ namespace broomstyx
         friend class DofManager;
 
     public:
-        Dof( int grp )
+        explicit Dof( int grp )
             : _group( grp )
             , _stage( UNASSIGNED )
             , _subsystem( UNASSIGNED )
             , _eqNo( UNASSIGNED )
+            , _constraintValue( 0. )
             , _isConstrained( false )
             , _primVarConverged( 0. )
             , _primVarCurrent( 0. )
+            , _primVarCorrection( 0. )
             , _secVar( 0. )
             , _residual( 0. )
             , _isSlave( false )
+            , _masterDof( nullptr )
         {}
 
-        virtual ~Dof() {}
+        virtual ~Dof() = default;
         
         // Disable copy constructor and assignment operator
         Dof( const Dof& ) = delete;
