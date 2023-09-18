@@ -1,6 +1,4 @@
 /*
-  Copyright (c) 2014 - 2019 University of Bergen
-  
   This file is part of the BROOMStyx project.
 
   BROOMStyx is free software: you can redistribute it and/or modify
@@ -199,6 +197,8 @@ void LoadStep::readDataFrom( FILE *fp )
 void LoadStep::solveYourself()
 {
     std::chrono::time_point<std::chrono::system_clock> tic, toc, setupTic, setupToc;
+    std::chrono::time_point<std::chrono::system_clock> innertic, innertoc;
+
     std::chrono::duration<double> tictoc;
     
     // Time data for immediate substep
@@ -231,13 +231,9 @@ void LoadStep::solveYourself()
     analysisModel().dofManager().removeAllDofConstraints();
     analysisModel().domainManager().removeAllCellConstraints();
 
-    // Solve each stage in sequence
-    for ( int curStage = 0; curStage < _nStage; curStage++ )
+    // Carry out special pre-processing procedures
+    for ( int curStage = 1; curStage <= 4; curStage++ )
     {
-        std::printf( "\n    Stage # %d", curStage );
-        std::printf( "\n  -----------------\n" );
-
-        // Carry out special pre-processing procedures
         std::printf( "\n  %-40s", "Running preprocesing routines ..." );
         std::fflush( stdout );
         tic = std::chrono::high_resolution_clock::now();
@@ -253,132 +249,131 @@ void LoadStep::solveYourself()
                 Cell *curCell = analysisModel().domainManager().giveCell( iCell, dim );
                 int cellLabel = analysisModel().domainManager().giveLabelOf( curCell );
 
-                for ( int i = 0; i < (int)_preProcess.size(); i++ )
+                for ( int i = 0; i < (int) _preProcess.size(); i++ )
                 {
-                    int domainLabel = analysisModel().domainManager().givePhysicalEntityNumberFor( _preProcess[ i ].domainTag );
-                    if ( cellLabel == domainLabel) {
-                        Numerics *numerics = analysisModel().domainManager().giveNumericsForDomain( domainLabel, curStage );
-                        numerics->performPreprocessingAt( curCell, _preProcess[i].directive );
+                    int domainLabel = analysisModel().domainManager().givePhysicalEntityNumberFor(
+                            _preProcess[ i ].domainTag );
+                    if ( cellLabel == domainLabel )
+                    {
+                        Numerics *numerics = analysisModel().domainManager().giveNumericsForDomain( domainLabel,
+                                                                                                    curStage );
+                        numerics->performPreprocessingAt( curCell, _preProcess[ i ].directive );
                     }
                 }
             }
         }
+    }
 
-        toc = std::chrono::high_resolution_clock::now();
-        tictoc = toc - tic;
-        std::printf( "done (time = %f sec.)\n", tictoc.count() );
+    toc  = std::chrono::high_resolution_clock::now();
+    tictoc = toc - tic;
+    std::printf( "done (time = %f sec.)\n", tictoc.count() );
 
-        // Find constrained degrees of freedom
-        std::printf( "\n  %-40s", "Marking constrained DOFs ..." );
-        std::fflush( stdout );
+    // Find constrained degrees of freedom
+    std::printf( "\n  %-40s", "Marking constrained DOFs ..." );
+    std::fflush( stdout );
+    tic = std::chrono::high_resolution_clock::now();
+    for ( int stage = 1; stage <= _nStage; stage++ )
+        this->findConstrainedDofsAtStage( stage );
+    toc = std::chrono::high_resolution_clock::now();
+    tictoc = toc - tic;
+    std::printf( "done (time = %f sec.)\n", tictoc.count() );
+
+    // Find active DOFs
+    std::printf( "  %-40s", "Finding active DOFs ..." );
+    std::fflush( stdout );
+    tic = std::chrono::high_resolution_clock::now();
+    analysisModel().dofManager().findActiveDofs();
+    toc = std::chrono::high_resolution_clock::now();
+    tictoc = toc - tic;
+    std::printf( "done (time = %f sec.)\n", tictoc.count() );
+
+    analysisModel().dofManager().reportNumberOfActiveDofs();
+
+    // Construct sparse matrix profiles for each stage
+    for ( int stage = 1; stage <= _nStage; stage++ )
+    {
+        // First impose constraints to allow numerics to set proper flags for cells where needed
+        _solutionMethod[ stage ]->imposeConstraintsAt( stage, _boundaryCondition, _time );
+        _solutionMethod[ stage ]->formSparsityProfileForStage( stage );
+    }
+
+    setupToc = std::chrono::high_resolution_clock::now();
+    tictoc = setupToc - setupTic;
+    diagnostics().addSetupTime( tictoc.count() );
+
+    // ------------------------------------------------------------------
+    //                       Solution proper
+
+    // Cycle through substeps
+    // ----------------------
+    bool endOfLoadStep = false;
+
+    int curSubstep = 0;
+    int skipCount = 0;
+    bool forceBreak = false;
+
+    while ( !endOfLoadStep )
+    {
+        curSubstep++;
+
+        if ( curSubstep > _maxSubsteps )
+            throw std::runtime_error("Maximum number of substeps exceeded!");
+
         tic = std::chrono::high_resolution_clock::now();
-        this->findConstrainedDofsAtStage( curStage );
-        toc = std::chrono::high_resolution_clock::now();
-        tictoc = toc - tic;
-        std::printf( "done (time = %f sec.)\n", tictoc.count() );
 
-        // Find active DOFs
-        std::printf( "  %-40s", "Finding active DOFs ..." );
-        std::fflush( stdout );
-        tic = std::chrono::high_resolution_clock::now();
-        analysisModel().dofManager().findActiveDofs();
-        toc = std::chrono::high_resolution_clock::now();
-        tictoc = toc - tic;
-        std::printf( "done (time = %f sec.)\n", tictoc.count() );
+        std::printf("\n  -----------------------------------------");
+        std::printf("\n    LOADSTEP # %d, Substep # %d", _loadStepNum, curSubstep);
+        std::printf("\n  -----------------------------------------");
 
-        analysisModel().dofManager().reportNumberOfActiveDofs();
+        std::printf("\n    Target time: %.14E\n", _time.giveTargetTime());
 
-        // Construct sparse matrix profiles for each stage
-        for ( int i = 1; i <= _nStage; i++ )
+        // Solve each stage in sequence
+        for ( int curStage = 1; curStage <= _nStage; curStage++ )
         {
-            // First impose constraints to allow numerics to set proper flags for cells where needed
-            _solutionMethod[ i ]->imposeConstraintsAt( i, _boundaryCondition, _time );
-            _solutionMethod[ i ]->formSparsityProfileForStage( i );
-        }
-
-        setupToc = std::chrono::high_resolution_clock::now();
-        tictoc = setupToc - setupTic;
-        diagnostics().addSetupTime( tictoc.count() );
-
-        // ------------------------------------------------------------------
-        //                       Solution proper
-
-        // Cycle through substeps
-        // ----------------------
-        bool endOfLoadStep = false;
-
-        int curSubstep = 0;
-        int skipCount = 0;
-        bool forceBreak = false;
-
-        while ( !endOfLoadStep )
-        {
-            curSubstep++;
-
-            if ( curSubstep > _maxSubsteps )
-                throw std::runtime_error( "Maximum number of substeps exceeded!" );
-
-            tic = std::chrono::high_resolution_clock::now();
-
-            std::printf( "\n  -----------------------------------------" );
-            std::printf( "\n    LOADSTEP # %d, Substep # %d", _loadStepNum, curSubstep );
-            std::printf( "\n  -----------------------------------------" );
-            std::printf( "\n    Target time: %.14E\n", _time.giveTargetTime() );
-
-            int nStage = analysisModel().solutionManager().giveNumberOfStages();
-
-            int curSubstepIter = 0;
+            int  curSubstepIter = 0;
             bool substepConverged = false;
             forceBreak = false;
 
-            do
+            while ( !substepConverged && !forceBreak )
             {
                 ++curSubstepIter;
 
-                std::printf( "\n    Substep Iter. # %d", curSubstepIter );
-                std::printf( "\n  -----------------------------------------\n" );
+                std::printf( "\n    Stage # %d, Substep Iter. # %d", curStage, curSubstepIter );
+                std::printf( "\n  --------------------------------------------\n");
 
-                int error = _solutionMethod[ curStage ]->computeSolutionFor( curStage, _boundaryCondition, _fieldCondition, _time );
-                if ( error == 0 )
-                    stageConverged[ curStage ] = true;
-
+                // Solve substep
+                int error = _solutionMethod[ curStage ]->computeSolutionFor( curStage, _boundaryCondition, _fieldCondition, _time);
+                if ( error  == 0 )
+                    substepConverged = true;
                 else if ( error == 1 )
                 {
-                    std::printf( "\n**************************************\n" );
-                    std::printf( "Maximum number of iterations exceeded!\n" );
-                    std::printf( "(LoadStep # %d, Substep # %d\n\n", _loadStepNum, curSubstep );
+                    std::printf( "\n**************************************\n");
+                    std::printf( "Maximum number of iterations exceeded!\n");
+                    std::printf( "(LoadStep # %d, Stage # %d, Substep # %d\n\n", _loadStepNum, curStage, curSubstep );
                     forceBreak = true;
                 }
                 else
                 {
-                    std::printf( "\n**************************************\n" );
-                    std::printf( "Solution method terminated with error flag" );
-                    std::printf( " '%d'!\n\n", error );
-                    throw std::runtime_error( "Terminating LoadStep!" );
+                    std::printf("\n**************************************\n");
+                    std::printf("Solution method terminated with error flag");
+                    std::printf(" '%d'!\n\n", error);
+                    throw std::runtime_error("Terminating LoadStep!");
                 }
+            }
 
-                substepConverged = true;
-                for (int curStage = 1; curStage <= nStage; curStage++)
-                {
-                    if (!stageConverged[curStage])
-                        substepConverged = false;
-                }
-            } while (!substepConverged && !forceBreak);
-
-            if (forceBreak) {
-                std::chrono::time_point<std::chrono::system_clock> innertic, innertoc;
-
+            if ( forceBreak )
+            {
                 // Perform any needed computations at cells before finalizing data
                 innertic = std::chrono::high_resolution_clock::now();
-                this->performPrefinalCalculationsAtCells();
+                this->performPrefinalCalculationsAtStage( curStage );
 
                 // Finalize data (unconverged results)
-                analysisModel().dofManager().finalizeDofPrimaryValues();
+                analysisModel().dofManager().finalizeDofPrimaryValuesAtStage( curStage );
                 innertoc = std::chrono::high_resolution_clock::now();
                 tictoc = innertoc - innertic;
                 diagnostics().addUpdateTime(tictoc.count());
 
-                analysisModel().domainManager().finalizeCellDataAt(_time);
+                analysisModel().domainManager().finalizeCellDataAt( _time, curStage );
 
                 // Perform post-processing for nodal field values
                 innertic = std::chrono::high_resolution_clock::now();
@@ -388,78 +383,90 @@ void LoadStep::solveYourself()
                 diagnostics().addPostprocessingTime(tictoc.count());
 
                 // Write unconverged results and then terminate program
-                analysisModel().outputManager().writeOutput(_time.giveTargetTime());
-                std::printf("IMPORTANT: Above output contains non-converged results!!!\n\n");
-                throw std::runtime_error("");
-            } else {
-                std::chrono::time_point<std::chrono::system_clock> innertic, innertoc;
-
-                // Perform any needed computations at cells before finalizing data
-                innertic = std::chrono::high_resolution_clock::now();
-                this->performPrefinalCalculationsAtCells();
-
-                // Finalize data
-                analysisModel().dofManager().finalizeDofPrimaryValues();
-                innertoc = std::chrono::high_resolution_clock::now();
-                tictoc = innertoc - innertic;
-                diagnostics().addUpdateTime(tictoc.count());
-
-                innertic = std::chrono::high_resolution_clock::now();
-                analysisModel().domainManager().finalizeCellDataAt(_time);
-
-                // Perform post-processing for nodal field values
-                analysisModel().domainManager().performNodalPostProcessing();
-                innertoc = std::chrono::high_resolution_clock::now();
-                tictoc = innertoc - innertic;
-                diagnostics().addPostprocessingTime(tictoc.count());
-
-                // Update time and target time for next substep
-                _time.advanceTime();
-
-                if (_time.hasReachedEnd())
-                    endOfLoadStep = true;
-
-                toc = std::chrono::high_resolution_clock::now();
-                tictoc = toc - tic;
-                std::printf("\n    Substep completed in %f sec.\n", tictoc.count());
-
-                ++skipCount;
-                if (skipCount == _writeInterval) {
-                    analysisModel().outputManager().writeOutput(_time.giveCurrentTime());
-                    skipCount = 0;
-                } else if (endOfLoadStep)
-                    analysisModel().outputManager().writeOutput(_time.giveCurrentTime());
-
-                analysisModel().outputManager().writeOutputQuantities(_time.giveCurrentTime());
+                analysisModel().outputManager().writeOutput( _time.giveTargetTime() );
+                std::printf( "IMPORTANT: Above output contains non-converged results!!!\n\n" );
+                throw std::runtime_error( "" );
             }
+
+            // Perform any needed computations at cells before finalizing data
+            innertic = std::chrono::high_resolution_clock::now();
+            this->performPrefinalCalculationsAtStage( curStage );
+
+            // Finalize data
+            analysisModel().dofManager().finalizeDofPrimaryValuesAtStage( curStage );
+
+            analysisModel().domainManager().finalizeCellDataAt( _time, curStage );
+            innertoc = std::chrono::high_resolution_clock::now();
+            tictoc = innertoc - innertic;
+            diagnostics().addUpdateTime(tictoc.count());
         }
 
-        // Carry out special post-processing procedures
-        tic = std::chrono::high_resolution_clock::now();
-        std::printf("  %-40s", "Running postprocessing routines ...");
-        std::fflush(stdout);
+        // Perform post-processing for nodal field values
+        innertic = std::chrono::high_resolution_clock::now();
+        analysisModel().domainManager().performNodalPostProcessing();
+        innertoc = std::chrono::high_resolution_clock::now();
+        tictoc = innertoc - innertic;
+        diagnostics().addPostprocessingTime(tictoc.count());
 
+        // Update time and target time for next substep
+        _time.advanceTime();
+
+        if ( _time.hasReachedEnd() )
+            endOfLoadStep = true;
+
+        toc = std::chrono::high_resolution_clock::now();
+        tictoc = toc - tic;
+        std::printf("\n    Substep completed in %f sec.\n", tictoc.count());
+
+        ++skipCount;
+        if ( skipCount == _writeInterval )
+        {
+            analysisModel().outputManager().writeOutput(_time.giveCurrentTime());
+            skipCount = 0;
+        }
+        else if ( endOfLoadStep )
+            analysisModel().outputManager().writeOutput(_time.giveCurrentTime());
+
+        analysisModel().outputManager().writeOutputQuantities(_time.giveCurrentTime());
+    }
+
+    // Carry out special post-processing procedures
+    tic = std::chrono::high_resolution_clock::now();
+    std::printf("  %-40s", "Running postprocessing routines ...");
+    std::fflush(stdout);
+
+    for ( int curStage = 1; curStage <= _nStage; curStage++ )
+    {
+        for ( int dim = 0; dim < 4; dim++ )
+        {
+            int nCells = analysisModel().domainManager().giveNumberOfCellsWithDimension( dim );
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
-        for (int iCell = 0; iCell < nCells; iCell++) {
-            Cell *curCell = analysisModel().domainManager().giveDomainCell(iCell);
-            int cellLabel = analysisModel().domainManager().giveLabelOf(curCell);
+            for ( int iCell = 0; iCell < nCells; iCell++ )
+            {
+                Cell *curCell = analysisModel().domainManager().giveCell( iCell, dim );
+                int cellLabel = analysisModel().domainManager().giveLabelOf( curCell );
 
-            for (int i = 0; i < (int) _postProcess.size(); i++) {
-                int domainLabel = analysisModel().domainManager().givePhysicalEntityNumberFor(
-                        _postProcess[i].domainTag);
-                if (cellLabel == domainLabel) {
-                    Numerics *numerics = analysisModel().domainManager().giveNumericsForDomain(domainLabel);
-                    numerics->performPostprocessingAt(curCell, _postProcess[i].directive);
+                for ( int i = 0; i < (int) _postProcess.size(); i++ )
+                {
+                    int domainLabel = analysisModel().domainManager().givePhysicalEntityNumberFor(
+                            _postProcess[ i ].domainTag );
+                    if ( cellLabel == domainLabel )
+                    {
+                        Numerics *numerics = analysisModel().domainManager().giveNumericsForDomain( domainLabel,
+                                                                                                    curStage );
+                        numerics->performPostprocessingAt( curCell, _postProcess[ i ].directive );
+                    }
                 }
             }
         }
-        toc = std::chrono::high_resolution_clock::now();
-        tictoc = toc - tic;
-        std::printf("done (time = %f sec.)\n", tictoc.count());
-        diagnostics().addPostprocessingTime(tictoc.count());
     }
+
+    toc = std::chrono::high_resolution_clock::now();
+    tictoc = toc - tic;
+    std::printf("done (time = %f sec.)\n", tictoc.count());
+    diagnostics().addPostprocessingTime(tictoc.count());
 
     setupToc = std::chrono::high_resolution_clock::now();
     tictoc = setupToc - setupTic;
@@ -495,7 +502,6 @@ void LoadStep::findConstrainedDofsAtStage( int stage )
     for ( int bcIdx = 0; bcIdx < (int)_boundaryCondition.size(); bcIdx++ )
     {
         BoundaryCondition curBC = _boundaryCondition[ bcIdx ];
-        Numerics* targetNumerics = analysisModel().numericsManager().giveNumerics( curBC.targetNumerics() );
         int boundaryId = analysisModel().domainManager().givePhysicalEntityNumberFor( curBC.boundaryName() );
 
         // Check for essential boundary condition on nodes
@@ -560,7 +566,7 @@ void LoadStep::performPrefinalCalculationsAtStage( int stage )
         for ( int i = 0; i < nCells; i++ )
         {
             Cell *curCell = analysisModel().domainManager().giveCell( i, dim );
-            Numerics* numerics = analysisModel().domainManager().giveNumericsFor( targetCell, stage );
+            Numerics* numerics = analysisModel().domainManager().giveNumericsFor( curCell, stage );
             if ( numerics )
                 numerics->performPrefinalizationCalculationsAt( curCell );
         }
