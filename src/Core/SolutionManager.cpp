@@ -153,16 +153,22 @@ void SolutionManager::imposeInitialConditions()
         }
         else if ( condType == "CellDof" )
         {
-            Numerics* numerics = analysisModel().domainManager().giveNumericsForDomain( domainId );
-
             for ( int j = 0; j < nCells; j++ )
             {
-                Cell* curCell = analysisModel().domainManager().giveDomainCell( j );
+                Cell* curCell = analysisModel().domainManager().giveCell( j, dim );
                 int cellLabel = analysisModel().domainManager().giveLabelOf( curCell );
 
                 if ( cellLabel == domainId )
                 {
-                    numerics->imposeInitialConditionAt( curCell, _initCond[ i ] );
+                    // Imposition of initial conditions must be done through numerics object since cell DOFs
+                    // do not have predefined coordinates
+                    // (It is assumed that each cell DOF type is associated with only one Numerics object)
+                    for ( int curStage = 1; curStage <= _nStage; curStage++ )
+                    {
+                        Numerics* numerics = analysisModel().domainManager().giveNumericsFor( curCell, curStage );
+                        if ( numerics )
+                            numerics->imposeInitialConditionAt( curCell, _initCond[ i ] );
+                    }
                 }
             }
         }
