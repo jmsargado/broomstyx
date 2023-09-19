@@ -55,7 +55,7 @@ namespace broomstyx
         void          readNumberOfStagesFrom( FILE* fp );
 
     private:
-        int _nStages;
+        int _nStage;
         std::set<int> _stage;
         std::vector<LoadStep*> _loadStep;
         std::vector<InitialCondition> _initCond;

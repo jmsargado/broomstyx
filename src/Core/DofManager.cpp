@@ -662,38 +662,38 @@ void DofManager::reportNumberOfActiveDofs()
 //
 //    targetDof->_subsystem = subsysNum;
 //}
-//// ----------------------------------------------------------------------------
-//void DofManager::updatePrimaryVariableAt( Dof*      targetDof
-//                                        , double    val
-//                                        , ValueType valType )
-//{
-//    if ( valType == current_value )
-//    {
-//        targetDof->_primVarCorrection = val - targetDof->_primVarCurrent;
-//        targetDof->_primVarCurrent = val;
-//    }
-//    else if ( valType == incremental_value )
-//    {
-//        targetDof->_primVarCorrection = val - targetDof->_primVarCurrent + targetDof->_primVarConverged;
-//        targetDof->_primVarCurrent = val + targetDof->_primVarConverged;
-//    }
-//    else if ( valType == converged_value )
-//    {
-//        targetDof->_primVarCorrection = 0.;
-//        targetDof->_primVarConverged = val;
-//        targetDof->_primVarCurrent = val;
-//    }
-//    else if ( valType == correction )
-//    {
-//        targetDof->_primVarCorrection = val;
-//        targetDof->_primVarCurrent += val;
-//    }
-//    else
-//    {
-//        targetDof->_primVarCurrent += val - targetDof->_primVarCorrection;
-//        targetDof->_primVarCorrection = val;
-//    }
-//}
+// ----------------------------------------------------------------------------
+void DofManager::updatePrimaryVariableAt( Dof*      targetDof
+                                        , double    val
+                                        , ValueType valType )
+{
+    if ( valType == current_value )
+    {
+        targetDof->_primVarCorrection = val - targetDof->_primVarCurrent;
+        targetDof->_primVarCurrent = val;
+    }
+    else if ( valType == incremental_value )
+    {
+        targetDof->_primVarCorrection = val - targetDof->_primVarCurrent + targetDof->_primVarConverged;
+        targetDof->_primVarCurrent = val + targetDof->_primVarConverged;
+    }
+    else if ( valType == converged_value )
+    {
+        targetDof->_primVarCorrection = 0.;
+        targetDof->_primVarConverged = val;
+        targetDof->_primVarCurrent = val;
+    }
+    else if ( valType == correction )
+    {
+        targetDof->_primVarCorrection = val;
+        targetDof->_primVarCurrent += val;
+    }
+    else
+    {
+        targetDof->_primVarCurrent += val - targetDof->_primVarCorrection;
+        targetDof->_primVarCorrection = val;
+    }
+}
 //// ----------------------------------------------------------------------------
 //void DofManager::updateResidualAt( Dof* targetDof, double val )
 //{

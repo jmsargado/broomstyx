@@ -61,14 +61,20 @@ void SolutionManager::commenceSolution()
     std::chrono::duration<double> tictoc;
 
     // Set stages for nodal and elemental degrees of freedom
-    tic = std::chrono::high_resolution_clock::now();
-    int nDomCells = analysisModel().domainManager().giveNumberOfDomainCells();
-    for ( int i = 0; i < nDomCells; i++ )
+    for ( int dim = 0; dim < 4; dim++ )
     {
-        Cell* curCell = analysisModel().domainManager().giveDomainCell( i );
-        int label = analysisModel().domainManager().giveLabelOf( curCell );
-        Numerics* numerics = analysisModel().domainManager().giveNumericsForDomain( label );
-        numerics->setDofStagesAt( curCell );
+        tic = std::chrono::high_resolution_clock::now();
+        int nCells = analysisModel().domainManager().giveNumberOfCellsWithDimension( dim );
+        for ( int i = 0; i < nCells; i++ )
+        {
+            Cell *curCell = analysisModel().domainManager().giveCell( i, dim );
+            for ( int curStage = 1; curStage <= _nStage; curStage++ )
+            {
+                Numerics* numerics = analysisModel().domainManager().giveNumericsFor( curCell, curStage );
+                if ( numerics )
+                    numerics->setDofStagesAt( curCell );
+            }
+        }
     }
     toc = std::chrono::high_resolution_clock::now();
     tictoc = toc - tic;
@@ -110,10 +116,11 @@ void SolutionManager::imposeInitialConditions()
     for ( int i = 0; i < (int)_initCond.size(); i++ )
     {
         std::string domainLabel = _initCond[ i ].domainLabel();
-        int domainId = analysisModel().domainManager().givePhysicalEntityNumberFor( domainLabel );
-        int nCells = analysisModel().domainManager().giveNumberOfDomainCells();
-
         std::string condType = _initCond[ i ].conditionType();
+        int domainId = analysisModel().domainManager().givePhysicalEntityNumberFor( domainLabel );
+        int dim = analysisModel().domainManager().giveDimensionForPhysicalEntity( domainId );
+
+        int nCells = analysisModel().domainManager().giveNumberOfCellsWithDimension( dim );
 
         if ( condType == "nodalDof" )
         {
@@ -122,7 +129,7 @@ void SolutionManager::imposeInitialConditions()
 
             for ( int j = 0; j < nCells; j++ )
             {
-                Cell* curCell = analysisModel().domainManager().giveDomainCell( j );
+                Cell* curCell = analysisModel().domainManager().giveCell( j, dim );
                 int cellLabel = analysisModel().domainManager().giveLabelOf( curCell );
 
                 if ( cellLabel == domainId )
@@ -206,5 +213,5 @@ void SolutionManager::readLoadStepsFrom( FILE *fp )
 // ----------------------------------------------------------------------------
 void SolutionManager::readNumberOfStagesFrom( FILE* fp )
 {
-    _nStages = getIntegerInputFrom( fp, "Failed to read number of solution stages from input file.", _name );
+    _nStage = getIntegerInputFrom( fp, "Failed to read number of solution stages from input file.", _name );
 }

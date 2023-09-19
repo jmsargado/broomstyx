@@ -93,7 +93,7 @@ namespace broomstyx
 //        void   setEquationNumberFor( Dof* targetDof, int eqNo );
 //        void   setStageFor( Dof* targetDof, int stgNum );
 //        void   setSubsystemFor( Dof* targetDof, int subsysNum );
-//        void   updatePrimaryVariableAt( Dof* targetDof, double val, ValueType valType );
+        void   updatePrimaryVariableAt( Dof* targetDof, double val, ValueType valType );
 //        void   updateResidualAt( Dof* targetDof, double val );
         void   writeConvergedDofValuesTo( Node* targetNode );
 
