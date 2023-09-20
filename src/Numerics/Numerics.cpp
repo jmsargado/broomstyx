@@ -146,14 +146,14 @@ void Numerics::readDataFrom( FILE* fp )
         }
     }
     
-    // Stages to be used for numerics type
-    _stage.assign( _nStages, 0 );
-    verifyKeyword( fp, str = "Stage", _name );
-    for ( int i = 0; i < _nStages; i++ )
-        _stage[ i ] = getIntegerInputFrom( fp, "Failed to read stage assignment from input file!", _name );
-    
-    for ( auto curStage : _stage )
-        analysisModel().solutionManager().registerStage( curStage, _name );
+//    // Stages to be used for numerics type
+//    _stage.assign( _nStages, 0 );
+//    verifyKeyword( fp, str = "Stage", _name );
+//    for ( int i = 0; i < _nStages; i++ )
+//        _stage[ i ] = getIntegerInputFrom( fp, "Failed to read stage assignment from input file!", _name );
+//
+//    for ( auto curStage : _stage )
+//        analysisModel().solutionManager().registerStage( curStage, _name );
     
     // Subsystem assignments
     if ( _nSubsystems > 0 )
@@ -362,10 +362,10 @@ void Numerics::setDofStagesAt( Cell* targetCell )
 
 // Helper methods
 // ----------------------------------------------------------------------------
-std::vector<Material*> Numerics::giveMaterialSetFor( Cell* targetCell )
+std::vector<Material*> Numerics::giveMaterialSetFor( Cell* targetCell, int stage )
 {
     int label = analysisModel().domainManager().giveLabelOf( targetCell );
-    return analysisModel().domainManager().giveMaterialSetForDomain( label );
+    return analysisModel().domainManager().giveMaterialSetForDomain( label, stage );
 }
 // ----------------------------------------------------------------------------
 void Numerics::error_unimplemented( std::string method )

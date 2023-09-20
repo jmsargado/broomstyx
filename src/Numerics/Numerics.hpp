@@ -178,7 +178,7 @@ namespace broomstyx
         std::vector<int> _subsystem;
         
         // Helper methods
-        std::vector<Material*> giveMaterialSetFor( Cell* targetCell );
+        std::vector<Material*> giveMaterialSetFor( Cell* targetCell, int stage );
         void error_unimplemented( std::string method );
     };
 }

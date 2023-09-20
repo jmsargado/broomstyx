@@ -212,7 +212,7 @@ void SolutionManager::readLoadStepsFrom( FILE *fp )
     for ( int i = 0; i < nLoadSteps; i++ )
     {
         int lsNum = getIntegerInputFrom( fp, "Failed to read load step number from input file!", _name );
-        _loadStep[ i ] = new LoadStep( lsNum, _stage.size() );
+        _loadStep[ i ] = new LoadStep( lsNum, _nStage );
         _loadStep[ i ]->readDataFrom( fp );
     }
 }
