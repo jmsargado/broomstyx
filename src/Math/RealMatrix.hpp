@@ -80,15 +80,24 @@ namespace broomstyx
         
         // Copy constructor
         RealMatrix( const RealMatrix& source )
-            : _dim1( source._dim1 )
-            , _dim2( source._dim2 )
-            , _ptr( new double[ _dim1 * _dim2 ] )
         {
+            if ( source._dim1 > 0 || source._dim2 > 0 )
+            {
+                _dim1 = source._dim1;
+                _dim2 = source._dim2;
+                _ptr = new double[ _dim1 * _dim2 ];
 #ifdef VERBOSE_REALMATRIX_CONSTRUCTION
-            std::printf( "...RealMatrix Copy constructor called.\n" );
-            std::fflush(stdout);
+                std::printf( "...RealMatrix Copy constructor called.\n" );
+                std::fflush(stdout);
 #endif
-            std::copy( source._ptr, source._ptr + _dim1 * _dim2, _ptr );
+                std::copy( source._ptr, source._ptr + _dim1 * _dim2, _ptr );
+            }
+            else
+            {
+                _dim1 = 0;
+                _dim2 = 0;
+                _ptr = nullptr;
+            }
         }
 
         // Move constructor

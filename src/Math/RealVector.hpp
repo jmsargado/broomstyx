@@ -72,14 +72,22 @@ namespace broomstyx
 
         // Copy constructor
         RealVector( const RealVector& source )
-            : _dim(source._dim)
         {
+            if ( source._dim > 0 )
+            {
+                _dim = source._dim;
 #ifdef VERBOSE_REALVECTOR_CONSTRUCTION
-            std::printf("...RealVector Copy constructor called.\n");
-            std::fflush(stdout);
+                std::printf("...RealVector Copy constructor called.\n");
+                std::fflush(stdout);
 #endif
-            _ptr = new double[ _dim ];
-            std::copy(source._ptr, source._ptr + _dim, _ptr);
+                _ptr = new double[_dim];
+                std::copy( source._ptr, source._ptr + _dim, _ptr );
+            }
+            else
+            {
+                _dim = 0;
+                _ptr = nullptr;
+            }
         }
 
         // Move constructor
