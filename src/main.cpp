@@ -1,6 +1,4 @@
 /*
-  Copyright (c) 2014 - 2019 University of Bergen
-  
   This file is part of the BROOMStyx project.
 
   BROOMStyx is free software: you can redistribute it and/or modify
@@ -23,6 +21,13 @@
 
 #include "config.h"
 
+#include <algorithm>
+#include <chrono>
+#include <cstring>
+#include "Core/AnalysisModel.hpp"
+#include "Util/Diagnostics.hpp"
+#include "Core/ObjectFactory.hpp"
+
 #ifdef BUILD_TESTS
 #include "../tests/broomstyx_test.hpp"
 #endif
@@ -30,18 +35,18 @@
 #include <cstdio>
 #include <cstring>
 
-#ifdef BUILD_TESTS
 using namespace broomstyx;
-#endif
 
-int main(int argc, char **argv) {
-	if ( argc != 2 ) {
+int main( int argc, char **argv )
+{
+	if ( argc != 2 )
+    {
 		std::printf( "\n\tError in program call: insufficient input!" );
 		std::printf( "\n\tSample invocation: \"broomstyx <inputFile>\"\n\n" );
 		return 0;
 	}
 
-    if ( std::strcmp( argv[1],"--test" ) == 0 )
+    if ( std::strcmp( argv[ 1 ], "--test" ) == 0 )
 	{
 #ifdef BUILD_TESTS
 		performTests();
@@ -49,7 +54,7 @@ int main(int argc, char **argv) {
 		std::printf( "\n\tError: Tests not compiled! Rerun cmake with variable BUILD_TEST=ON.\n\n" );
 #endif
 	}
-/*    else
+    else
     {
 		if ( objectFactory().hasError() )
 		{
@@ -58,28 +63,29 @@ int main(int argc, char **argv) {
 		else
 		{
 			std::chrono::time_point<std::chrono::system_clock> tic, toc;
-			std::chrono::duration<double> tictoc;
+			std::chrono::duration<double> tictoc{};
 			tic = std::chrono::high_resolution_clock::now();
 
 			try
 			{
-				analysisModel().initializeYourself(argv[1]);
+				analysisModel().initializeYourself( argv[ 1 ] );
 				analysisModel().solveYourself();
 
-				std::printf("\n\nRun successful ---> program will now terminate.");
+				std::printf( "\n\nRun successful ---> program will now terminate." );
 			}
-			catch (std::exception& e)
+			catch ( std::exception& e )
 			{
-				std::printf("\n%s\nException caught in main.cpp\n\n", e.what());
-				std::fflush(stdout);
+				std::printf( "\n%s\nException caught in main.cpp\n\n", e.what() );
+				std::fflush( stdout );
 			}
 
 			toc = std::chrono::high_resolution_clock::now();
 			tictoc = toc - tic;
-			std::printf("\nTotal runtime = %f seconds.\n\n", tictoc.count());
+			std::printf( "\nTotal runtime = %f seconds.\n\n", tictoc.count() );
 
 			diagnostics().outputDiagnostics();
 		}
-    } */
+    }
+    
     return 0;
 }

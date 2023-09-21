@@ -34,16 +34,17 @@ typedef std::chrono::duration<double> TimeDuration;
 typedef std::chrono::high_resolution_clock Timer;
 
 AnalysisModel::AnalysisModel()
-    : _meshReader(nullptr)
+    : _dofManager( nullptr )
+    , _domainManager( nullptr )
+    , _materialManager( nullptr )
+    , _numericsManager( nullptr )
+    , _outputManager( nullptr )
+    , _solutionManager( nullptr )
+    , _meshReader( nullptr )
 {}
 
 AnalysisModel::~AnalysisModel()
 {
-#ifdef VERBOSE_DESTRUCTION
-    std::printf("\nDestroying AnalysisModel... ");
-    std::fflush(stdout);
-#endif
-    
     if ( _meshReader )
         delete _meshReader;
 
@@ -53,11 +54,6 @@ AnalysisModel::~AnalysisModel()
     delete _numericsManager;
     delete _materialManager;
     delete _dofManager;
-    
-#ifdef VERBOSE_DESTRUCTION
-    std::printf("\nDone destroying AnalysisModel.\n\n");
-    std::fflush(stdout);
-#endif
 }
 
 // Public methods
