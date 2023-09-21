@@ -86,6 +86,6 @@ int main( int argc, char **argv )
 			diagnostics().outputDiagnostics();
 		}
     }
-    
+
     return 0;
 }
