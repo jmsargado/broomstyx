@@ -57,29 +57,29 @@ namespace broomstyx
         ObjectFactory( const ObjectFactory& ) = delete;
         ObjectFactory& operator=( const ObjectFactory& ) = delete;
         
-        bool hasError();
+        bool hasError() const;
         
-        ConvergenceCriterion* instantiateConvergenceCriterion( std::string name );
-        LinearSolver*         instantiateLinearSolver( std::string name );
-        Material*             instantiateMaterial( std::string name );
-        MeshReader*           instantiateMeshReader( std::string name );
-        Numerics*             instantiateNumerics( std::string name );
-        OutputQuantity*       instantiateOutputQuantity( std::string name );
-        OutputWriter*         instantiateOutputWriter( std::string name );
-        SolutionMethod*       instantiateSolutionMethod( std::string name );
-        SparseMatrix*         instantiateSparseMatrix( std::string name );
-        UserFunction*         instantiateUserFunction( std::string name );
+        ConvergenceCriterion* instantiateConvergenceCriterion( const std::string& name );
+        LinearSolver*         instantiateLinearSolver( const std::string& name );
+        Material*             instantiateMaterial( const std::string& name );
+        MeshReader*           instantiateMeshReader( const std::string& name );
+        Numerics*             instantiateNumerics( const std::string& name );
+        OutputQuantity*       instantiateOutputQuantity( const std::string& name );
+        OutputWriter*         instantiateOutputWriter( const std::string& name );
+        SolutionMethod*       instantiateSolutionMethod( const std::string& name );
+        SparseMatrix*         instantiateSparseMatrix( const std::string& name );
+        UserFunction*         instantiateUserFunction( const std::string& name );
         
-        bool registerConvergenceCriterion( std::string name, ConvergenceCriterion* (*)() );
-        bool registerLinearSolver( std::string name, LinearSolver* (*)() );
-        bool registerMaterial( std::string name, Material* (*)() );
-        bool registerMeshReader( std::string name, MeshReader* (*)() );
-        bool registerNumerics( std::string name, Numerics* (*)() );
-        bool registerOutputQuantity( std::string name, OutputQuantity* (*)() );
-        bool registerOutputWriter( std::string name, OutputWriter* (*)() );
-        bool registerSolutionMethod( std::string name, SolutionMethod* (*)() );
-        bool registerSparseMatrix( std::string name, SparseMatrix* (*)() );
-        bool registerUserFunction( std::string name, UserFunction* (*)() );
+        bool registerConvergenceCriterion( const std::string& name, ConvergenceCriterion* (*)() );
+        bool registerLinearSolver( const std::string& name, LinearSolver* (*)() );
+        bool registerMaterial( const std::string& name, Material* (*)() );
+        bool registerMeshReader( const std::string& name, MeshReader* (*)() );
+        bool registerNumerics( const std::string& name, Numerics* (*)() );
+        bool registerOutputQuantity( const std::string& name, OutputQuantity* (*)() );
+        bool registerOutputWriter( const std::string& name, OutputWriter* (*)() );
+        bool registerSolutionMethod( const std::string& name, SolutionMethod* (*)() );
+        bool registerSparseMatrix( const std::string& name, SparseMatrix* (*)() );
+        bool registerUserFunction( const std::string& name, UserFunction* (*)() );
 
     private:
         std::map< std::string, ConvergenceCriterion* (*)() > _convergenceCriterion;

@@ -26,18 +26,18 @@
 
 using namespace broomstyx;
 
-ObjectFactory::ObjectFactory() : _errorInRegistration(false) {}
+ObjectFactory::ObjectFactory() : _errorInRegistration( false ) {}
 
-ObjectFactory::~ObjectFactory() {}
+ObjectFactory::~ObjectFactory() = default;
 
 // Object Instantiation
 // ----------------------------------------------------------------------------
-bool ObjectFactory::hasError()
+bool ObjectFactory::hasError() const
 {
     return _errorInRegistration;
 }
 // ----------------------------------------------------------------------------
-ConvergenceCriterion* ObjectFactory::instantiateConvergenceCriterion( std::string name )
+ConvergenceCriterion* ObjectFactory::instantiateConvergenceCriterion( const std::string& name )
 {
     auto it = _convergenceCriterion.find( name );
     if ( it != _convergenceCriterion.end() )
@@ -46,7 +46,7 @@ ConvergenceCriterion* ObjectFactory::instantiateConvergenceCriterion( std::strin
         throw std::runtime_error( "Convergence criterion '" + name + "' has not been registered.\n" );
 }
 // ----------------------------------------------------------------------------
-LinearSolver* ObjectFactory::instantiateLinearSolver( std::string name )
+LinearSolver* ObjectFactory::instantiateLinearSolver( const std::string& name )
 {
     auto it = _linearSolver.find( name );
     if ( it != _linearSolver.end() )
@@ -55,7 +55,7 @@ LinearSolver* ObjectFactory::instantiateLinearSolver( std::string name )
         throw std::runtime_error( "LinearSolver '" + name + "' has not been registered.\n" );
 }
 // ----------------------------------------------------------------------------
-Material* ObjectFactory::instantiateMaterial( std::string name )
+Material* ObjectFactory::instantiateMaterial( const std::string& name )
 {
     auto it = _material.find( name );
     if ( it != _material.end() )
@@ -64,7 +64,7 @@ Material* ObjectFactory::instantiateMaterial( std::string name )
         throw std::runtime_error( "Material '" + name + "' has not been registered.\n" );
 }
 // ----------------------------------------------------------------------------
-MeshReader* ObjectFactory::instantiateMeshReader( std::string name )
+MeshReader* ObjectFactory::instantiateMeshReader( const std::string& name )
 {
     auto it = _meshReader.find( name );
     if ( it != _meshReader.end() )
@@ -73,7 +73,7 @@ MeshReader* ObjectFactory::instantiateMeshReader( std::string name )
         throw std::runtime_error( "MeshReader '" + name + "' has not been registered.\n" );
 }
 // ----------------------------------------------------------------------------
-Numerics* ObjectFactory::instantiateNumerics( std::string name )
+Numerics* ObjectFactory::instantiateNumerics( const std::string& name )
 {
     auto it = _numerics.find( name );
     if ( it != _numerics.end() )
@@ -82,7 +82,7 @@ Numerics* ObjectFactory::instantiateNumerics( std::string name )
         throw std::runtime_error( "Numerics '" + name + "' has not been registered.\n" );
 }
 // ----------------------------------------------------------------------------
-OutputQuantity* ObjectFactory::instantiateOutputQuantity( std::string name )
+OutputQuantity* ObjectFactory::instantiateOutputQuantity( const std::string& name )
 {
     auto it = _outputQuantity.find( name );
     if ( it != _outputQuantity.end() )
@@ -91,7 +91,7 @@ OutputQuantity* ObjectFactory::instantiateOutputQuantity( std::string name )
         throw std::runtime_error( "OutputQuantity '" + name + "' has not been registered.\n" );
 }
 // ----------------------------------------------------------------------------
-OutputWriter* ObjectFactory::instantiateOutputWriter( std::string name )
+OutputWriter* ObjectFactory::instantiateOutputWriter( const std::string& name )
 {
     auto it = _outputWriter.find( name );
     if ( it != _outputWriter.end() )
@@ -100,7 +100,7 @@ OutputWriter* ObjectFactory::instantiateOutputWriter( std::string name )
         throw std::runtime_error( "OutputWriter '" + name + "' has not been registered.\n" );
 }
 // ----------------------------------------------------------------------------
-SolutionMethod* ObjectFactory::instantiateSolutionMethod( std::string name )
+SolutionMethod* ObjectFactory::instantiateSolutionMethod( const std::string& name )
 {
     auto it = _solutionMethod.find( name );
     if ( it != _solutionMethod.end() )
@@ -109,7 +109,7 @@ SolutionMethod* ObjectFactory::instantiateSolutionMethod( std::string name )
         throw std::runtime_error( "SolutionMethod '" + name + "' has not been registered.\n" );
 }
 // ----------------------------------------------------------------------------
-SparseMatrix* ObjectFactory::instantiateSparseMatrix( std::string name )
+SparseMatrix* ObjectFactory::instantiateSparseMatrix( const std::string& name )
 {
     auto it = _sparseMatrix.find( name );
     if ( it != _sparseMatrix.end() )
@@ -118,7 +118,7 @@ SparseMatrix* ObjectFactory::instantiateSparseMatrix( std::string name )
         throw std::runtime_error( "SparseMatrix '" + name + "' has not been registered.\n" );
 }
 // ----------------------------------------------------------------------------
-UserFunction* ObjectFactory::instantiateUserFunction( std::string name )
+UserFunction* ObjectFactory::instantiateUserFunction( const std::string& name )
 {
     auto it = _userFunction.find( name );
     if ( it != _userFunction.end() )
@@ -129,7 +129,7 @@ UserFunction* ObjectFactory::instantiateUserFunction( std::string name )
 
 // Class Registration
 // ----------------------------------------------------------------------------
-bool ObjectFactory::registerConvergenceCriterion( std::string name, ConvergenceCriterion* (*creator)() )
+bool ObjectFactory::registerConvergenceCriterion( const std::string& name, ConvergenceCriterion* (*creator)() )
 {
     auto it = _convergenceCriterion.find( name );
     if ( it != _convergenceCriterion.end() )
@@ -147,7 +147,7 @@ bool ObjectFactory::registerConvergenceCriterion( std::string name, ConvergenceC
     return _errorInRegistration;
 }
 // ----------------------------------------------------------------------------
-bool ObjectFactory::registerLinearSolver( std::string name, LinearSolver* (*creator)() )
+bool ObjectFactory::registerLinearSolver( const std::string& name, LinearSolver* (*creator)() )
 {
     auto it = _linearSolver.find( name );
     if ( it != _linearSolver.end() )
@@ -165,7 +165,7 @@ bool ObjectFactory::registerLinearSolver( std::string name, LinearSolver* (*crea
     return _errorInRegistration;
 }
 // ----------------------------------------------------------------------------
-bool ObjectFactory::registerMaterial( std::string name, Material* (*creator)() )
+bool ObjectFactory::registerMaterial( const std::string& name, Material* (*creator)() )
 {
     auto it = _material.find( name );
     if ( it != _material.end() )
@@ -183,7 +183,7 @@ bool ObjectFactory::registerMaterial( std::string name, Material* (*creator)() )
     return _errorInRegistration;
 }
 // ----------------------------------------------------------------------------
-bool ObjectFactory::registerMeshReader( std::string name, MeshReader* (*creator)() )
+bool ObjectFactory::registerMeshReader( const std::string& name, MeshReader* (*creator)() )
 {
     auto it = _meshReader.find( name );
     if ( it != _meshReader.end() )
@@ -201,7 +201,7 @@ bool ObjectFactory::registerMeshReader( std::string name, MeshReader* (*creator)
     return _errorInRegistration;
 }
 // ----------------------------------------------------------------------------
-bool ObjectFactory::registerNumerics( std::string name, Numerics* (*creator)() )
+bool ObjectFactory::registerNumerics( const std::string& name, Numerics* (*creator)() )
 {
     auto it = _numerics.find( name );
     if ( it != _numerics.end() )
@@ -219,7 +219,7 @@ bool ObjectFactory::registerNumerics( std::string name, Numerics* (*creator)() )
     return _errorInRegistration;
 }
 // ----------------------------------------------------------------------------
-bool ObjectFactory::registerOutputQuantity( std::string name, OutputQuantity* (*creator)() )
+bool ObjectFactory::registerOutputQuantity( const std::string& name, OutputQuantity* (*creator)() )
 {
     auto it = _outputQuantity.find( name );
     if ( it != _outputQuantity.end() )
@@ -237,7 +237,7 @@ bool ObjectFactory::registerOutputQuantity( std::string name, OutputQuantity* (*
     return _errorInRegistration;
 }
 // ----------------------------------------------------------------------------
-bool ObjectFactory::registerOutputWriter( std::string name, OutputWriter* (*creator)() )
+bool ObjectFactory::registerOutputWriter( const std::string& name, OutputWriter* (*creator)() )
 {
     auto it = _outputWriter.find( name );
     if ( it != _outputWriter.end() )
@@ -255,7 +255,7 @@ bool ObjectFactory::registerOutputWriter( std::string name, OutputWriter* (*crea
     return _errorInRegistration;
 }
 // ----------------------------------------------------------------------------
-bool ObjectFactory::registerSolutionMethod( std::string name, SolutionMethod* (*creator)() )
+bool ObjectFactory::registerSolutionMethod( const std::string& name, SolutionMethod* (*creator)() )
 {
     auto it = _solutionMethod.find( name );
     if ( it != _solutionMethod.end() )
@@ -273,7 +273,7 @@ bool ObjectFactory::registerSolutionMethod( std::string name, SolutionMethod* (*
     return _errorInRegistration;
 }
 // ----------------------------------------------------------------------------
-bool ObjectFactory::registerSparseMatrix( std::string name, SparseMatrix* (*creator)() )
+bool ObjectFactory::registerSparseMatrix( const std::string& name, SparseMatrix* (*creator)() )
 {
     auto it = _sparseMatrix.find( name );
     if ( it != _sparseMatrix.end() )
@@ -291,7 +291,7 @@ bool ObjectFactory::registerSparseMatrix( std::string name, SparseMatrix* (*crea
     return _errorInRegistration;
 }
 // ----------------------------------------------------------------------------
-bool ObjectFactory::registerUserFunction( std::string name, UserFunction* (*creator)() )
+bool ObjectFactory::registerUserFunction( const std::string& name, UserFunction* (*creator)() )
 {
     auto it = _userFunction.find( name );
     if ( it != _userFunction.end() )
@@ -304,7 +304,7 @@ bool ObjectFactory::registerUserFunction( std::string name, UserFunction* (*crea
     {
         _userFunction[ name ] = creator;
         if ( VERBOSE_REGISTRATION )
-            std::printf( "Registered SparseMatrix '%s'\n", name.c_str() );
+            std::printf( "Registered user function '%s'\n", name.c_str() );
     }
     return _errorInRegistration;
 }
