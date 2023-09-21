@@ -154,12 +154,12 @@ MeshReader& AnalysisModel::meshReader() { return *_meshReader; }
 void AnalysisModel::readMeshReaderFrom( FILE* fp )
 {
     std::string name, src = "AnalysisModel";
-    name = getStringInputFrom(fp, "Failed to read mesh format from input file.", src);
+    name = getStringInputFrom( fp, "Failed to read mesh format from input file.", src );
     
-    _meshReader = objectFactory().instantiateMeshReader(name);
+    _meshReader = objectFactory().instantiateMeshReader( name );
 
     if ( !_meshReader )
-        throw std::runtime_error("Error: MeshReader not defined!\n");
+        throw std::runtime_error( "Error: MeshReader not defined!\n" );
 }
 
 void AnalysisModel::readInputFile()
@@ -169,64 +169,63 @@ void AnalysisModel::readInputFile()
     std::chrono::duration<double> tictoc{};
     std::string src = "AnalysisModel";
 
-    std::printf("\n\n  %-40s", "Reading input file ...");
-    std::fflush(stdout);
+    std::printf( "\n\n  %-40s", "Reading input file ..." );
+    std::fflush( stdout );
 
     tic = std::chrono::high_resolution_clock::now();
 
     fp = std::fopen( _inputFilename.c_str(), "r" );
     if ( !fp )
-        throw std::runtime_error("\nSpecified input file '" + _inputFilename + "' not found!");
+        throw std::runtime_error( "\nSpecified input file '" + _inputFilename + "' not found!" );
 
     std::string decl;
     do {
-        decl = getDeclarationFrom(fp);
+        decl = getDeclarationFrom( fp );
 
         if ( decl == "CELL_DOFS" )
-            _dofManager->readCellDofsFrom(fp);
+            _dofManager->readCellDofsFrom( fp );
         else if ( decl == "CSV_OUTPUT" )
-            _outputManager->readDataForCSVOutputFrom(fp);
+            _outputManager->readDataForCSVOutputFrom( fp );
 //        else if ( decl == "DOF_PER_FACE" )
 //            _dofManager->readFaceDofsFrom(fp);
         else if ( decl == "DOMAIN_ASSIGNMENTS" )
-            _domainManager->readDomainAssignmentsFrom(fp);
+            _domainManager->readDomainAssignmentsFrom( fp );
         else if ( decl == "FIELDS_PER_CELL" )
-            _domainManager->readNumberOfFieldsPerCellFrom(fp);
+            _domainManager->readNumberOfFieldsPerCellFrom( fp );
 //        else if ( decl == "FIELDS_PER_FACE" )
 //            _domainManager->readNumberOfFieldsPerFaceFrom(fp);
         else if ( decl == "FIELDS_PER_NODE" )
-            _domainManager->readNumberOfFieldsPerNodeFrom(fp);
+            _domainManager->readNumberOfFieldsPerNodeFrom( fp );
         else if ( decl == "INITIAL_CONDITIONS" )
-            _solutionManager->readInitialConditionsFrom(fp);
+            _solutionManager->readInitialConditionsFrom( fp );
         else if ( decl == "LOADSTEPS" )
-            _solutionManager->readLoadStepsFrom(fp);
+            _solutionManager->readLoadStepsFrom( fp );
         else if ( decl == "MATERIALS" )
-            _materialManager->readMaterialsFrom(fp);
+            _materialManager->readMaterialsFrom( fp );
         else if ( decl == "MESH_FILE" )
-            _meshFilename = getStringInputFrom( fp, "\nFailed to read mesh filename from input file!", src);
+            _meshFilename = getStringInputFrom( fp, "\nFailed to read mesh filename from input file!", src );
         else if ( decl == "MESH_READER" )
-            this->readMeshReaderFrom(fp);
+            this->readMeshReaderFrom( fp );
         else if ( decl == "MULTIFREEDOM_CONSTRAINTS" )
-            _dofManager->readMultiFreedomConstraintsFrom(fp);
+            _dofManager->readMultiFreedomConstraintsFrom( fp );
         else if ( decl == "NODAL_DOFS" )
-            _dofManager->readNodalDofsFrom(fp);
+            _dofManager->readNodalDofsFrom( fp );
         else if ( decl == "NUMERICS" )
-            _numericsManager->readNumericsFrom(fp);
+            _numericsManager->readNumericsFrom( fp );
         else if ( decl == "OUTPUT_FORMAT" )
-            _outputManager->readOutputWriterFromFile(fp);
+            _outputManager->readOutputWriterFromFile( fp );
         else if ( decl == "SOLUTION_STAGES" )
-            _solutionManager->readNumberOfStagesFrom(fp);
+            _solutionManager->readNumberOfStagesFrom( fp );
         else if ( decl != "END" )
-            throw std::runtime_error("Error: Unrecognized declaration '" + decl + "' encountered in input file!\n");
+            throw std::runtime_error( "Error: Unrecognized declaration '" + decl + "' encountered in input file!\n" );
     }
     while ( decl != "END" );
 
-    std::fclose(fp);
+    std::fclose( fp );
     toc = std::chrono::high_resolution_clock::now();
     tictoc = toc - tic;
-    std::printf("done (time = %f sec.)\n", tictoc.count());
+    std::printf( "done (time = %f sec.)\n", tictoc.count() );
 }
-
 // ----------------------------------------------------------------------------
 AnalysisModel& broomstyx::analysisModel()
 {
