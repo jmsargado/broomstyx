@@ -27,7 +27,6 @@
 #include "AnalysisModel.hpp"
 #include "Cell.hpp"
 #include "DofManager.hpp"
-#include "DomainManager.hpp"
 #include "MaterialManager.hpp"
 #include "Node.hpp"
 #include "NumericsManager.hpp"
@@ -53,8 +52,8 @@ DomainManager::~DomainManager()
         analysisModel().dofManager().destroyNodalDofsAt( curNode );
         delete curNode;
     }
-    
-    for ( int dim = 0; dim < 4; dim++ )
+
+    for ( int dim : { 0, 1, 2, 3 } )
     {
         for ( auto curCell : _cellList[ dim ] )
         {
@@ -66,7 +65,7 @@ DomainManager::~DomainManager()
 
 // Public methods
 // ----------------------------------------------------------------------------
-void DomainManager::createPhysicalEntity( int dim, int number, std::string label )
+void DomainManager::createPhysicalEntity( int dim, int number, const std::string& label )
 {
     PhysicalEntity newPhysEnt;
     
@@ -77,21 +76,26 @@ void DomainManager::createPhysicalEntity( int dim, int number, std::string label
     _physEnt.push_back( newPhysEnt );
 }
 // ----------------------------------------------------------------------------
-DomainManager::PhysicalEntity DomainManager::givePhysicalEntity( int n )
+int DomainManager::giveDimensionForPhysicalEntity( int n ) const
+{
+    return _physEnt[ n ].dimension;
+}
+// ----------------------------------------------------------------------------
+DomainManager::PhysicalEntity DomainManager::givePhysicalEntity( int n ) const
 {
     return _physEnt[ n ];
 }
 // ----------------------------------------------------------------------------
-std::vector<Material*> DomainManager::giveMaterialSetForDomain( int label, int stage )
+std::vector<Material*> DomainManager::giveMaterialSetForDomain( int label, int stage ) const
 {
-    std::string name = this->givePhysicalEntityNameFor( label );
     try
     {
-        auto materialSet = _materialSet[ stage ].at( name );
+        auto materialSet = _materialSet[ stage ].at( label );
         return materialSet;
     }
     catch( const std::exception& e )
     {
+        std::string name = this->givePhysicalEntityNameFor( label );
         throw std::runtime_error( "No Material set defined for '" + name + "' at stage "
             + std::to_string( stage ) + "!\n" );
     }
@@ -102,14 +106,13 @@ int DomainManager::giveNumberOfPhysicalNames()
     return _physEnt.size();
 }
 // ----------------------------------------------------------------------------
-Numerics* DomainManager::giveNumericsForDomain( int label, int stage )
+Numerics* DomainManager::giveNumericsForDomain( int label, int stage ) const
 {
-    std::string name = this->givePhysicalEntityNameFor( label );
     Numerics* numerics;
 
     try
     {
-        numerics = _numerics[ stage ].at( name );
+        numerics = _numerics[ stage ].at( label );
     }
     catch( const std::exception& e )
     {
@@ -119,7 +122,7 @@ Numerics* DomainManager::giveNumericsForDomain( int label, int stage )
     return numerics;
 }
 // ----------------------------------------------------------------------------
-std::string DomainManager::givePhysicalEntityNameFor( int physEntNum )
+std::string DomainManager::givePhysicalEntityNameFor( int physEntNum ) const
 {
     std::string physEntName;
     bool success = false;
@@ -141,7 +144,7 @@ std::string DomainManager::givePhysicalEntityNameFor( int physEntNum )
     return physEntName;
 }
 // ----------------------------------------------------------------------------
-int DomainManager::givePhysicalEntityNumberFor( std::string name )
+int DomainManager::givePhysicalEntityNumberFor( const std::string& name ) const
 {
     int physEntNumber;
     bool success = false;
@@ -166,11 +169,11 @@ void DomainManager::readDomainAssignmentsFrom( FILE* fp )
 {
     // Get number of stages from SolutionManager and initialize maps
     // for numerics and material sets
-    int nStages = analysisModel().solutionManager().giveNumberOfStages();
+    _nStage = analysisModel().solutionManager().giveNumberOfStages();
 
     // Note: Stage numbers start from 1 (and not 0) so we allocate an extra element
-    _numerics.resize( nStages + 1 );
-    _materialSet.resize( nStages + 1 );
+    _numerics.resize( _nStage + 1 );
+    _materialSet.resize( _nStage + 1 );
 
     int nAssign = getIntegerInputFrom( fp, "Failed to read number of domain assignments from input file!", _name );
     
@@ -182,16 +185,16 @@ void DomainManager::readDomainAssignmentsFrom( FILE* fp )
 
         // Read domain label
         std::string domainLabel = getStringInputFrom( fp, "Failed reading domain label from input file!", _name );
+        int physNum = this->givePhysicalEntityNumberFor( domainLabel );
                 
         // Read numerics
         verifyKeyword( fp, "Numerics", _name );
         int numericsLabel = getIntegerInputFrom( fp, "Failed reading numerics label from input file!", _name );
-        
         Numerics* numericsPtr = analysisModel().numericsManager().giveNumerics( numericsLabel );
         
         // Create map entry
-        std::pair< std::map<std::string, Numerics*>::iterator, bool> entry;
-        entry = _numerics[ stage ].insert( std::pair<std::string, Numerics*>( domainLabel, numericsPtr ) );
+        std::pair< std::map<int, Numerics*>::iterator, bool> entry;
+        entry = _numerics[ stage ].insert( std::pair<int, Numerics*>( physNum, numericsPtr ) );
         if ( !entry.second )
             throw std::runtime_error( "Multiple declaration of numerics for label '" + domainLabel
                 + "' detected in input file!\nSource: " + _name );
@@ -211,23 +214,13 @@ void DomainManager::readDomainAssignmentsFrom( FILE* fp )
             }
 
             // Create map entry
-            std::pair<std::map<std::string, std::vector<Material*> >::iterator,bool> tmp;
-            tmp = _materialSet[ stage ].insert( std::pair<std::string, std::vector<Material*> >( domainLabel, matSet ) );
+            std::pair<std::map<int, std::vector<Material*> >::iterator,bool> tmp;
+            tmp = _materialSet[ stage ].insert( std::pair<int, std::vector<Material*> >( physNum, matSet ) );
             if ( !tmp.second )
                 throw std::runtime_error( "Multiple declaration of material sets for label '" + domainLabel
                     + "' detected in input file!\nSource: " + _name );
         }
     }
-}
-// ----------------------------------------------------------------------------
-void DomainManager::setNumberOfStagesTo( int nStage )
-{
-    _nStage = nStage;
-
-    // Initialize maps for numerics and material sets
-    // Note: Stage numbers start from 1 (and not 0) so we allocate an extra element
-    _numerics.resize( nStage + 1 );
-    _materialSet.resize( nStage + 1 );
 }
 
 // Methods involving node access
@@ -249,7 +242,7 @@ void DomainManager::countNodes()
                 _node[ curCount++ ] = *curNode;
 }
 // ----------------------------------------------------------------------------
-std::set<Cell*> DomainManager::giveCellsAttachedTo( Node* node, int dim )
+std::set<Cell*>& DomainManager::giveCellsAttachedTo( Node* node, int dim )
 {
     return node->_attachedCell[ dim ];
 }
@@ -277,12 +270,12 @@ int DomainManager::giveIdOf( Node* node )
     return node->_id;
 }
 // ----------------------------------------------------------------------------
-Node* DomainManager::giveNode( int nodeNum ) 
+Node* DomainManager::giveNode( int nodeNum ) const
 {
     return _node[ nodeNum ];
 }
 // ----------------------------------------------------------------------------
-int DomainManager::giveNumberOfNodes()
+int DomainManager::giveNumberOfNodes() const
 {
     return _node.size();
 }
@@ -317,10 +310,10 @@ void DomainManager::makeNewNodeAt( RealVector& location )
     _nodeList.push_back( newNode );
 }
 // ----------------------------------------------------------------------------
-void DomainManager::performNodalPostProcessing()
+void DomainManager::performNodalPostProcessing() const
 {
     std::chrono::time_point<std::chrono::system_clock> tic, toc;
-    std::chrono::duration<double> tictoc;
+    std::chrono::duration<double> tictoc{};
     
     std::printf( "    %-40s", "Performing nodal post-processing ..." );
     std::fflush( stdout );
@@ -404,7 +397,7 @@ void DomainManager::finalizeCellDataAt( const TimeData& time, int stage )
 void DomainManager::findCellAttachments()
 {
      std::chrono::time_point<std::chrono::system_clock> tic, toc;
-     std::chrono::duration<double> tictoc;
+     std::chrono::duration<double> tictoc{};
 
      std::printf( "  %-40s", "Finding cell attachments ..." );
      std::fflush( stdout );
@@ -576,7 +569,7 @@ Numerics* DomainManager::giveNumericsFor( Cell* targetCell, int stage )
 void DomainManager::initializeMaterialsAtCells()
 {
     std::chrono::time_point<std::chrono::system_clock> tic, toc;
-    std::chrono::duration<double> tictoc;
+    std::chrono::duration<double> tictoc{};
     
     std::printf( "  %-40s", "Initializing material data at cells ..." );
     std::fflush( stdout );
@@ -606,7 +599,7 @@ void DomainManager::initializeMaterialsAtCells()
 void DomainManager::initializeNumericsAtCells()
 {
     std::chrono::time_point<std::chrono::system_clock> tic, toc;
-    std::chrono::duration<double> tictoc;
+    std::chrono::duration<double> tictoc{};
     
     std::printf( "  %-40s", "Initializing numerics at cells ..." );
     std::fflush( stdout );
@@ -704,7 +697,7 @@ void DomainManager::reportDetailedStatus()
             for ( int j = 0; j < (int)node.size(); j++ )
                 std::printf( "%d ", node[j]->_id );
 
-            int nDofs = curCell->_dof.size();
+            int nDofs = (int)curCell->_dof.size();
             if ( nDofs > 0 )
             {
                 std::printf( ", dofs = " );
@@ -712,7 +705,7 @@ void DomainManager::reportDetailedStatus()
                     std::printf( "%d ", analysisModel().dofManager().giveEquationNumberAt( curCell->_dof[ j ] ) );
             }
 
-            int nNeighbors = curCell->_neighbor.size();
+            int nNeighbors = (int)curCell->_neighbor.size();
             if ( nNeighbors > 0 )
             {
                 std::printf( ", neighbors = " );

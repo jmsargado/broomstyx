@@ -56,29 +56,28 @@ namespace broomstyx
             std::string name;
         };
         
-        void                   createPhysicalEntity( int dim, int number, std::string label );
-        int                    giveDimensionForPhysicalEntity( int n );
-        PhysicalEntity         givePhysicalEntity( int n );
-        std::vector<Material*> giveMaterialSetForDomain( int label, int stage );
+        void                   createPhysicalEntity( int dim, int number, const std::string& label );
+        int                    giveDimensionForPhysicalEntity( int n ) const;
+        PhysicalEntity         givePhysicalEntity( int n ) const;
+        std::vector<Material*> giveMaterialSetForDomain( int label, int stage ) const;
         int                    giveNumberOfPhysicalNames();
-        Numerics*              giveNumericsForDomain( int label, int stage );
-        std::string            givePhysicalEntityNameFor( int physEntNum );
-        int                    givePhysicalEntityNumberFor( std::string name );
+        Numerics*              giveNumericsForDomain( int label, int stage ) const;
+        std::string            givePhysicalEntityNameFor( int physEntNum ) const;
+        int                    givePhysicalEntityNumberFor( const std::string& name ) const;
         void                   readDomainAssignmentsFrom( FILE* fp );
-        void                   setNumberOfStagesTo( int nStage );
 
         // Methods involving node access
         
-        void            countNodes();
-        std::set<Cell*> giveCellsAttachedTo( Node* node, int dim );
-        RealVector      giveCoordinatesOf( Node* node );
-        Dof*   giveNodalDof( int dofNum, Node* node );
-        double giveFieldValueAt( Node* node, int fieldNum );
-        int    giveIdOf( Node* node );
-        Node*  giveNode( int nodeNum );
-        int    giveNumberOfNodes();
+        void                    countNodes();
+        static std::set<Cell*>& giveCellsAttachedTo( Node* node, int dim );
+        static RealVector       giveCoordinatesOf( Node* node );
+        static Dof*             giveNodalDof( int dofNum, Node* node );
+        static double           giveFieldValueAt( Node* node, int fieldNum );
+        static int              giveIdOf( Node* node );
+        Node*  giveNode( int nodeNum ) const;
+        int    giveNumberOfNodes() const;
         void   makeNewNodeAt( RealVector& location );
-        void   performNodalPostProcessing();
+        void   performNodalPostProcessing() const;
         void   readNumberOfFieldsPerNodeFrom( FILE* fp );
         void   setCoordinatesOf( Node* targetNode, const RealVector& coor );
         void   setFieldValueAt( Node* targetNode, int fieldNum, double val );
@@ -91,14 +90,14 @@ namespace broomstyx
         void  findCellsAttachedTo( Cell* targetCell );
         Cell* giveCell( int num, int dim );
         Dof*  giveCellDof( int dofNum, Cell* targetCell );
-        Cell* giveDomainCellInPartition( int partNum, int cellNum );
+//        Cell* giveDomainCellInPartition( int partNum, int cellNum );
         int   giveElementTypeOf( Cell* targetCell );
         int   giveIdOf( Cell *targetCell );
         int   giveLabelOf( Cell *targetCell );
         std::vector<Cell*> giveNeighborsOf( Cell* targetCell );
-        std::vector<Node*> giveNodesOf( Cell* targetCell );
+        static std::vector<Node*> giveNodesOf( Cell* targetCell );
         int   giveNumberOfCellsWithDimension( int dim );
-        int   giveNumberOfNodesOf( Cell* targetCell );
+        static int   giveNumberOfNodesOf( Cell* targetCell );
         Numerics* giveNumericsFor( Cell* targetCell, int stage );
         void  initializeMaterialsAtCells();
         void  initializeNumericsAtCells();
@@ -109,7 +108,7 @@ namespace broomstyx
         void  reorderNodesOf( Cell* targetCell, std::vector<int>& reordering );
         void  reportDetailedStatus();
         void  reportStatus();
-        void  setElementTypeOf( Cell* targetCell, int elemType );
+        static void  setElementTypeOf( Cell* targetCell, int elemType );
         void  setNodesOf( Cell* targetCell, std::vector<int>& cellNodes );
 
     private:
@@ -118,8 +117,8 @@ namespace broomstyx
 
         std::vector<PhysicalEntity> _physEnt;
         
-        std::vector<std::map<std::string, Numerics*> > _numerics;
-        std::vector<std::map<std::string, std::vector< Material*> > > _materialSet;
+        std::vector<std::map<int, Numerics*> > _numerics;
+        std::vector<std::map<int, std::vector< Material*> > > _materialSet;
         
         int _fieldsPerNode;
         std::list<Node*>   _nodeList;

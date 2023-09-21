@@ -30,9 +30,9 @@
 
 using namespace broomstyx;
 
-SolutionMethod::SolutionMethod() {}
+SolutionMethod::SolutionMethod() : _loadStep( nullptr ) {}
 
-SolutionMethod::~SolutionMethod() {}
+SolutionMethod::~SolutionMethod() = default;
 // ---------------------------------------------------------------------------
 void SolutionMethod::getCurrentLoadStep()
 {
@@ -44,7 +44,7 @@ void SolutionMethod::imposeConstraintsAt( int stage
                                         , const TimeData& time )
 {
     std::chrono::time_point<std::chrono::system_clock> tic, toc;
-    std::chrono::duration<double> tictoc;
+    std::chrono::duration<double> tictoc{};
 
     tic = std::chrono::high_resolution_clock::now();
 
@@ -53,14 +53,15 @@ void SolutionMethod::imposeConstraintsAt( int stage
     {
         int boundaryId = analysisModel().domainManager().givePhysicalEntityNumberFor( bndCond[ ibc ].boundaryName() );
         Numerics* numerics = analysisModel().numericsManager().giveNumerics( bndCond[ ibc ].targetNumerics() );
+        int dim = analysisModel().domainManager().giveDimensionForPhysicalEntity( boundaryId );
         
-        int nBCells = analysisModel().domainManager().giveNumberOfBoundaryCells();
+        int nBCells = analysisModel().domainManager().giveNumberOfCellsWithDimension( dim );
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
         for ( int iCell = 0; iCell < nBCells; iCell++ )
         {
-            Cell* curCell = analysisModel().domainManager().giveBoundaryCell( iCell );
+            Cell* curCell = analysisModel().domainManager().giveCell( iCell, dim );
             int label = analysisModel().domainManager().giveLabelOf( curCell );
 
             if ( label == boundaryId )
@@ -70,23 +71,24 @@ void SolutionMethod::imposeConstraintsAt( int stage
             }
         }
 
-        // Some boundary conditions are actually internal conditions, so we need to loop over domain cells too
-        int nDCells = analysisModel().domainManager().giveNumberOfDomainCells();
-
-#ifdef _OPENMP
-#pragma omp parallel for
-#endif
-        for ( int iCell = 0; iCell < nDCells; iCell++ )
-        {
-            Cell* curCell = analysisModel().domainManager().giveDomainCell( iCell );
-            int label = analysisModel().domainManager().giveLabelOf( curCell );
-
-            if ( label == boundaryId )
-            {
-                // Specifics of constraint imposition are handled by numerics
-                numerics->imposeConstraintAt( curCell, stage, bndCond[ ibc ], time );
-            }
-        }
+        // The commented part has been rendered redundant
+//        // Some boundary conditions are actually internal conditions, so we need to loop over domain cells too
+//        int nDCells = analysisModel().domainManager().giveNumberOfDomainCells();
+//
+//#ifdef _OPENMP
+//#pragma omp parallel for
+//#endif
+//        for ( int iCell = 0; iCell < nDCells; iCell++ )
+//        {
+//            Cell* curCell = analysisModel().domainManager().giveDomainCell( iCell );
+//            int label = analysisModel().domainManager().giveLabelOf( curCell );
+//
+//            if ( label == boundaryId )
+//            {
+//                // Specifics of constraint imposition are handled by numerics
+//                numerics->imposeConstraintAt( curCell, stage, bndCond[ ibc ], time );
+//            }
+//        }
     }
 
     toc = std::chrono::high_resolution_clock::now();
@@ -97,25 +99,29 @@ void SolutionMethod::imposeConstraintsAt( int stage
 bool broomstyx::SolutionMethod::checkConvergenceOfNumericsAt( int stage )
 {
     std::chrono::time_point<std::chrono::system_clock> tic, toc;
-    std::chrono::duration<double> tictoc;
+    std::chrono::duration<double> tictoc{};
 
     tic = std::chrono::high_resolution_clock::now();
 
-    int nCells = analysisModel().domainManager().giveNumberOfDomainCells();
     int nUnconvergedCells = 0;
-    
-#ifdef _OPENMP
-#pragma omp parallel for reduction(+:nUnconvergedCells)    
-#endif
-    for ( int iCell = 0; iCell < nCells; iCell++ )
-    {
-        Cell* curCell = analysisModel().domainManager().giveDomainCell( iCell );
-        int label = analysisModel().domainManager().giveLabelOf( curCell );
-        Numerics* numerics = analysisModel().domainManager().giveNumericsForDomain( label );
 
-        bool cellConvergence = numerics->performAdditionalConvergenceCheckAt( curCell, stage );
-        if ( cellConvergence == false )
-            nUnconvergedCells += 1;
+    for ( int dim : { 0, 1, 2, 3 } )
+    {
+        int nCells = analysisModel().domainManager().giveNumberOfCellsWithDimension( dim );
+
+#ifdef _OPENMP
+#pragma omp parallel for reduction(+:nUnconvergedCells)
+#endif
+        for ( int iCell = 0; iCell < nCells; iCell++ )
+        {
+            Cell *curCell = analysisModel().domainManager().giveCell( iCell, dim );
+            int label = analysisModel().domainManager().giveLabelOf( curCell );
+            Numerics *numerics = analysisModel().domainManager().giveNumericsForDomain( label, stage );
+
+            bool cellConverged = numerics->performAdditionalConvergenceCheckAt( curCell, stage );
+            if ( !cellConverged )
+                nUnconvergedCells += 1;
+        }
     }
     
     toc = std::chrono::high_resolution_clock::now();
