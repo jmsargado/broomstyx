@@ -31,6 +31,8 @@ find_package( MKL )
 
 option( ENABLE_OPENMP "Compile with OpenMP" OFF )
 
+option( ENABLE_AVX "Compile with AVX Optimizations" OFF )
+
 # configure a header file to pass some of the CMake settings
 # to the source code
 configure_file(
@@ -49,11 +51,19 @@ set( CMAKE_VERBOSE_MAKEFILE OFF )
 # Set compiler and linker flags
 if ( ENABLE_OPENMP )
     set( OPENMP_CXX_FLAGS "-fopenmp" )
-    message(STATUS "Compilation with OpenMP is enabled")
+    message(STATUS "Compilation with OpenMP is enabled" )
 else()
     set( OPENMP_CXX_FLAGS "" )
-    message(STATUS "Compilation with OpenMP is disabled")
+    message(STATUS "Compilation with OpenMP is disabled" )
 endif()
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -m64 -std=c++17 -march=native ${OPENMP_CXX_FLAGS} -ffast-math -funroll-loops -Wall -fPIC" )
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--no-as-needed -lgomp -lpthread -lm -ldl" )
+if ( ENABLE_AVX )
+    set( AVX_CXX_FLAGS "-mavx" )
+    message(STATUS "Compilation with AVX optimizations is enabled" )
+else()
+    set( AVX_CXX_FLAGS "" )
+    message(STATUS "Compilation with AVX optimizations is disabled" )
+endif()
+
+set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -m64 ${AVX_CXX_FLAGS} -std=c++17 -march=native ${OPENMP_CXX_FLAGS} -ffast-math -funroll-loops -Wall -fPIC" )
+set( CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--no-as-needed -lgomp -lpthread -lm -ldl" )
