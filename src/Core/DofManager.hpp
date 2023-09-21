@@ -68,7 +68,7 @@ namespace broomstyx
         void   finalizeDofPrimaryValuesAtStage( int stage );
         void   findActiveDofs();
 //        std::vector<Dof*> giveActiveDofsAtStage( int stg );
-//        int    giveGroupNumberFor( Dof* targetDof );
+        static int giveGroupNumberFor( Dof* targetDof );
         int    giveIndexForCellDof( const std::string& name );
 //        int    giveIndexForFaceDof( const std::string& name );
         int    giveIndexForNodalDof( const std::string& name );
@@ -76,7 +76,7 @@ namespace broomstyx
 //        int    giveNumberOfActiveDofsAtStage( int stgNum );
 //        int    giveSubsystemNumberFor( Dof* targetDof );
 //        double giveValueOfConstraintAt( Dof* targetDof, ValueType valType );
-//        double giveValueOfPrimaryVariableAt( Dof* targetDof, ValueType valType );
+        double giveValueOfPrimaryVariableAt( Dof* targetDof, ValueType valType );
 //        double giveValueOfSecondaryVariableAt( Dof* targetDof );
 //        double giveValueOfResidualAt( Dof* targetDof );
         void   imposeMultiFreedomConstraints();

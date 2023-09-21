@@ -1,6 +1,4 @@
 /*
-  Copyright (c) 2014 - 2019 University of Bergen
-  
   This file is part of the BROOMStyx project.
 
   BROOMStyx is free software: you can redistribute it and/or modify
@@ -36,15 +34,17 @@ Diagnostics::Diagnostics()
     , _nSolves( 0 )
     , _nUpdates( 0 )
     , _coefMatAssemblyTime( 0. )
+    , _convergenceCheckTime( 0. )
     , _lhsAssemblyTime( 0. )
     , _outputWriteTime( 0. )
+    , _postprocessingTime( 0. )
     , _rhsAssemblyTime( 0. )
     , _setupTime( 0. )
     , _solveTime( 0. )
     , _updateTime( 0. )
 {}
 
-Diagnostics::~Diagnostics() {}
+Diagnostics::~Diagnostics() = default;
 
 // Public methods
 // ----------------------------------------------------------------------------
@@ -99,41 +99,35 @@ void Diagnostics::addUpdateTime( double duration )
     _updateTime += duration;
 }
 
-void Diagnostics::outputDiagnostics()
+void Diagnostics::outputDiagnostics() const
 {
-    std::printf( "\n================= SIMULATION DIAGNOSTICS =================\n\n" );
-    std::printf( "                   Number    Total time (seconds)\n\n" );
-    std::printf( "%-20s          %f\n", "Problem setup", _setupTime );
-    std::printf( "%-20s          %f\n", "System Assembly", _coefMatAssemblyTime + _lhsAssemblyTime + _rhsAssemblyTime );
-
-    if ( _coefMatAssemblyTime > ZEROTIME_TOL )
-        std::printf( "%-20s%-10d(%f)\n", "  Coef. Matrix", _nCoefMatAssembly, _coefMatAssemblyTime );
-
+    std::printf("\n================= SIMULATION DIAGNOSTICS =================\n\n");
+    std::printf("                   Number    Total time (seconds)\n\n");
+    std::printf("%-20s          %f\n", "Problem setup", _setupTime);
+    std::printf("%-20s          %f\n", "System Assembly", _coefMatAssemblyTime + _lhsAssemblyTime + _rhsAssemblyTime);
+    if ( _coefMatAssemblyTime > ZEROTIME_TOL)
+        std::printf("%-20s%-10d(%f)\n", "  Coef. Matrix", _nCoefMatAssembly, _coefMatAssemblyTime);
     if ( _lhsAssemblyTime > ZEROTIME_TOL )
-        std::printf( "%-20s%-10d(%f)\n", "  Left hand side", _nLhsAssembly, _lhsAssemblyTime );
-
+        std::printf("%-20s%-10d(%f)\n", "  Left hand side", _nLhsAssembly, _lhsAssemblyTime);
     if ( _rhsAssemblyTime > ZEROTIME_TOL )
-        std::printf( "%-20s%-10d(%f)\n", "  Right hand side", _nRhsAssembly, _rhsAssemblyTime );
-
-    std::printf( "%-20s%-10d%f\n", "Linear Solve", _nSolves, _solveTime );
-
+        std::printf("%-20s%-10d(%f)\n", "  Right hand side", _nRhsAssembly, _rhsAssemblyTime);
+    std::printf("%-20s%-10d%f\n", "Linear Solve", _nSolves, _solveTime);
     if ( _convergenceCheckTime > ZEROTIME_TOL )
-        std::printf("%-20s%-10d%f\n", "Convergence checks", _nConvergenceChecks, _convergenceCheckTime );
-
-    std::printf( "%-20s          %f\n", "Update", _updateTime );
-    std::printf( "%-20s          %f\n", "Postprocessing", _postprocessingTime );
-    std::printf( "%-20s          %f\n", "Output write", _outputWriteTime );
-    std::printf( "\n" );
-    std::printf( "%-20s          %f\n", "Sum", _setupTime
-                                             + _coefMatAssemblyTime
-                                             + _lhsAssemblyTime
-                                             + _rhsAssemblyTime
-                                             + _solveTime
-                                             + _convergenceCheckTime
-                                             + _updateTime
-                                             + _postprocessingTime
-                                             + _outputWriteTime );
-    std::printf( "\n==========================================================\n\n" );
+        std::printf("%-20s%-10d%f\n", "Convergence checks", _nConvergenceChecks, _convergenceCheckTime);
+    std::printf("%-20s          %f\n", "Update", _updateTime);
+    std::printf("%-20s          %f\n", "Postprocessing", _postprocessingTime);
+    std::printf("%-20s          %f\n", "Output write", _outputWriteTime);
+    std::printf("\n");
+    std::printf("%-20s          %f\n", "Sum", _setupTime
+                                            + _coefMatAssemblyTime 
+                                            + _lhsAssemblyTime 
+                                            + _rhsAssemblyTime 
+                                            + _solveTime
+                                            + _convergenceCheckTime 
+                                            + _updateTime 
+                                            + _postprocessingTime 
+                                            + _outputWriteTime);
+    std::printf("\n==========================================================\n\n");
 }
 
 // ----------------------------------------------------------------------------

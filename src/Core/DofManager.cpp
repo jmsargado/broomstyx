@@ -313,13 +313,13 @@ void DofManager::findActiveDofs()
 //    return _activeDof[ stg ];
 //}
 //// ----------------------------------------------------------------------------
-//int DofManager::giveGroupNumberFor( Dof* targetDof )
-//{
-//    if ( targetDof->_isSlave )
-//        targetDof = targetDof->_masterDof;
-//
-//    return targetDof->_group;
-//}
+int DofManager::giveGroupNumberFor( Dof* targetDof )
+{
+    if ( targetDof->_isSlave )
+        targetDof = targetDof->_masterDof;
+
+    return targetDof->_group;
+}
 // ----------------------------------------------------------------------------
 int DofManager::giveIndexForCellDof( const std::string& name )
 {
@@ -398,26 +398,26 @@ int DofManager::giveEquationNumberAt ( Dof* targetDof )
 //
 //    return val;
 //}
-//// ----------------------------------------------------------------------------
-//double DofManager::giveValueOfPrimaryVariableAt( Dof* targetDof, ValueType valType )
-//{
-//    double val;
-//    if ( targetDof->_isSlave )
-//        targetDof = targetDof->_masterDof;
-//
-//    if ( valType == current_value )
-//        val = targetDof->_primVarCurrent;
-//    else if ( valType == incremental_value )
-//        val = targetDof->_primVarCurrent - targetDof->_primVarConverged;
-//    else if ( valType == converged_value )
-//        val = targetDof->_primVarConverged;
-//    else if ( valType == correction )
-//        val = targetDof->_primVarCorrection;
-//    else
-//        throw std::runtime_error( "ERROR: Cannot request value of replacement correction of primary variable at DOF!" );
-//
-//    return val;
-//}
+// ----------------------------------------------------------------------------
+double DofManager::giveValueOfPrimaryVariableAt( Dof* targetDof, ValueType valType )
+{
+    double val;
+    if ( targetDof->_isSlave )
+        targetDof = targetDof->_masterDof;
+
+    if ( valType == current_value )
+        val = targetDof->_primVarCurrent;
+    else if ( valType == incremental_value )
+        val = targetDof->_primVarCurrent - targetDof->_primVarConverged;
+    else if ( valType == converged_value )
+        val = targetDof->_primVarConverged;
+    else if ( valType == correction )
+        val = targetDof->_primVarCorrection;
+    else
+        throw std::runtime_error( "ERROR: Cannot request value of replacement correction of primary variable at DOF!" );
+
+    return val;
+}
 //// ----------------------------------------------------------------------------
 //double DofManager::giveValueOfSecondaryVariableAt( Dof* targetDof )
 //{

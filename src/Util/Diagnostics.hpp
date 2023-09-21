@@ -38,7 +38,7 @@ namespace broomstyx
         void addSetupTime( double duration );
         void addSolveTime( double duration );
         void addUpdateTime( double duration );
-        void outputDiagnostics();
+        void outputDiagnostics() const;
 
     private:
         int _nCoefMatAssembly;
