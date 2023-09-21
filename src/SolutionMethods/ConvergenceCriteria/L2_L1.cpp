@@ -66,7 +66,7 @@ bool L2_L1::checkConvergenceOf( const RealVector& resid, const std::vector<Dof*>
     _threadDofCount.init( _nThreads );
 
 #ifdef _OPENMP
-#pragma omp parallel default( none ) shared( resid, dof )
+#pragma omp parallel
 #endif
     {
         int threadNum = 0;
@@ -171,7 +171,7 @@ void L2_L1::initialize( int dofGrpNum )
     _dofGrpNum = dofGrpNum;
 
 #ifdef _OPENMP
-#pragma omp parallel default( none )
+#pragma omp parallel
     {
 #pragma omp single
         {

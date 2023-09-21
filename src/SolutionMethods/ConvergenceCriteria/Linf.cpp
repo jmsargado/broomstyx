@@ -67,7 +67,7 @@ bool LInf::checkConvergenceOf( const RealVector& resid, const std::vector<Dof*>&
     _threadResidNorm.init(_nThreads);
 
 #ifdef _OPENMP
-#pragma omp parallel default( none ) shared( resid, dof )
+#pragma omp parallel
 #endif
     {
         int threadNum = 0;
@@ -165,7 +165,7 @@ void LInf::initialize( int dofGrpNum )
     _dofGrpNum = dofGrpNum;
     
     #ifdef _OPENMP
-    #pragma omp parallel default( none )
+    #pragma omp parallel
     {
         #pragma omp single
         {
