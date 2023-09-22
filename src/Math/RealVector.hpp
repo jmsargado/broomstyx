@@ -46,8 +46,8 @@ namespace broomstyx
     public:
         // Default constructor
         RealVector()
-            : _dim(0)
-            , _ptr(nullptr)
+            : _dim( 0 )
+            , _ptr( nullptr )
         {}
 
         // Constructor with initial memory allocation
@@ -65,9 +65,9 @@ namespace broomstyx
         RealVector( std::initializer_list<double> initList )
         {
             _dim = (int)initList.size();
-            _ptr = new double[ _dim ];
-            
-            std::copy(initList.begin(), initList.begin() + _dim, _ptr);
+            _ptr = new double[ _dim ]();
+
+            std::copy( initList.begin(), initList.end(), _ptr );
         }
 
         // Copy constructor
@@ -77,10 +77,10 @@ namespace broomstyx
             {
                 _dim = source._dim;
 #ifdef VERBOSE_REALVECTOR_CONSTRUCTION
-                std::printf("...RealVector Copy constructor called.\n");
-                std::fflush(stdout);
+                std::printf( "...RealVector Copy constructor called.\n" );
+                std::fflush( stdout );
 #endif
-                _ptr = new double[_dim];
+                _ptr = new double[ _dim ];
                 std::copy( source._ptr, source._ptr + _dim, _ptr );
             }
             else
@@ -92,12 +92,12 @@ namespace broomstyx
 
         // Move constructor
         RealVector( RealVector&& source )
-            : _dim(source._dim)
-            , _ptr(source._ptr)
+            : _dim( source._dim )
+            , _ptr( source._ptr )
         {
 #ifdef VERBOSE_REALVECTOR_CONSTRUCTION
-            std::printf("...RealVector Move constructor called.\n");
-            std::fflush(stdout);
+            std::printf( "...RealVector Move constructor called.\n" );
+            std::fflush( stdout );
 #endif
             source._ptr = nullptr;
             source._dim = 0;
@@ -122,9 +122,9 @@ namespace broomstyx
             _dim = (int)initList.size();
             if ( !_ptr )
                 _ptr = new double[ _dim ];
-            
-            std::copy(initList.begin(), initList.begin() + _dim, _ptr);
-            
+
+            std::copy( initList.begin(), initList.end(), _ptr );
+
             return *this;
         }
         
@@ -144,7 +144,7 @@ namespace broomstyx
 
             _dim = source._dim;
             _ptr = new double[ _dim ];
-            std::copy(source._ptr, source._ptr + _dim, _ptr);
+            std::copy( source._ptr, source._ptr + _dim, _ptr );
             
             return *this;
         }
@@ -173,9 +173,10 @@ namespace broomstyx
         {
 #ifndef NDEBUG
             if ( source._dim != _dim )
-                throw std::runtime_error("\nSize mismatch in operands for operator '+='!\n\tdim(A) = " + std::to_string(_dim) + ", dim(B) = " + std::to_string(source._dim));
+                throw std::runtime_error( "\nSize mismatch in operands for operator '+='!\n\tdim(A) = "
+                    + std::to_string( _dim ) + ", dim(B) = " + std::to_string( source._dim ) );
 #endif
-            cblas_daxpy(_dim, 1.0, source._ptr, 1, _ptr, 1);
+            cblas_daxpy( _dim, 1.0, source._ptr, 1, _ptr, 1 );
 
             return *this;
         }
@@ -184,9 +185,10 @@ namespace broomstyx
         {
 #ifndef NDEBUG
             if ( source._dim != _dim )
-                throw std::runtime_error("\nSize mismatch in operands for operator '+='!\n\tdim(A) = " + std::to_string(_dim) + ", dim(B) = " + std::to_string(source._dim));
+                throw std::runtime_error( "\nSize mismatch in operands for operator '+='!\n\tdim(A) = "
+                    + std::to_string( _dim ) + ", dim(B) = " + std::to_string( source._dim ) );
 #endif
-            cblas_daxpy(_dim, 1.0, source._ptr, 1, _ptr, 1);
+            cblas_daxpy( _dim, 1.0, source._ptr, 1, _ptr, 1 );
 
             return *this;
         }
@@ -196,9 +198,10 @@ namespace broomstyx
         {
 #ifndef NDEBUG
             if ( source._dim != _dim )
-                throw std::runtime_error("\nSize mismatch in operands for operator '-='!\n\tdim(A) = " + std::to_string(_dim) + ", dim(B) = " + std::to_string(source._dim));
+                throw std::runtime_error( "\nSize mismatch in operands for operator '-='!\n\tdim(A) = "
+                    + std::to_string( _dim ) + ", dim(B) = " + std::to_string( source._dim ) );
 #endif
-            cblas_daxpy(_dim, -1.0, source._ptr, 1, _ptr, 1);
+            cblas_daxpy( _dim, -1.0, source._ptr, 1, _ptr, 1 );
 
             return *this;
         }
@@ -207,9 +210,10 @@ namespace broomstyx
         {
 #ifndef NDEBUG
             if ( source._dim != _dim )
-                throw std::runtime_error("\nSize mismatch in operands for operator '-='!\n\tdim(A) = " + std::to_string(_dim) + ", dim(B) = " + std::to_string(source._dim));
+                throw std::runtime_error( "\nSize mismatch in operands for operator '-='!\n\tdim(A) = "
+                    + std::to_string( _dim ) + ", dim(B) = " + std::to_string( source._dim ) );
 #endif
-            cblas_daxpy(_dim, -1.0, source._ptr, 1, _ptr, 1);
+            cblas_daxpy( _dim, -1.0, source._ptr, 1, _ptr, 1 );
 
             return *this;
         }
@@ -217,14 +221,14 @@ namespace broomstyx
         // In-place scalar multiplication
         RealVector& operator*= ( double factor )
         {
-            cblas_dscal(_dim, factor, _ptr, 1);
+            cblas_dscal( _dim, factor, _ptr, 1 );
             return *this;         
         }
 
         // In-place scalar division
         RealVector& operator/= ( double factor )
         {
-            cblas_dscal(_dim, 1./factor, _ptr, 1);
+            cblas_dscal( _dim, 1./factor, _ptr, 1 );
             return *this;         
         }
         
@@ -233,11 +237,12 @@ namespace broomstyx
         {
 #ifndef NDEBUG
             if ( !_ptr )
-                throw std::runtime_error("\nCannot access RealVector component (" + std::to_string(idx) + ") -- vector is not initialized.");
+                throw std::runtime_error( "\nCannot access RealVector component ("
+                    + std::to_string( idx ) + ") -- vector is not initialized." );
 
             if ( idx < 0 || idx >= _dim )
-                throw std::runtime_error("\nCannot access RealVector component (" + std::to_string(idx) + ")! Valid range is (0-" 
-                        + std::to_string(_dim - 1) + ").");
+                throw std::runtime_error( "\nCannot access RealVector component (" + std::to_string( idx )
+                    + ")! Valid range is (0-" + std::to_string( _dim - 1 ) + ")." );
 #endif
             return _ptr[ idx ];
         }
@@ -246,11 +251,12 @@ namespace broomstyx
         {
 #ifndef NDEBUG
             if ( !_ptr )
-                throw std::runtime_error("\nCannot access RealVector component (" + std::to_string(idx) + ") -- vector is not initialized.");
+                throw std::runtime_error( "\nCannot access RealVector component (" + std::to_string( idx )
+                      + ") -- vector is not initialized." );
 
             if ( idx < 0 || idx >= _dim )
-                throw std::runtime_error("\nCannot access RealVector component (" + std::to_string(idx) + ")! Valid range is (0-" 
-                        + std::to_string(_dim - 1) + ").");
+                throw std::runtime_error( "\nCannot access RealVector component (" + std::to_string( idx )
+                      + ")! Valid range is (0-" + std::to_string( _dim - 1 ) + ")." );
 #endif
             return _ptr[ idx ];
         }
@@ -260,13 +266,13 @@ namespace broomstyx
         {
 #ifndef NDEBUG
             if ( _dim != 3 || B._dim != 3 )
-                throw std::runtime_error("\nVector cross product only operates on vectors with dim = 3!");
+                throw std::runtime_error( "\nVector cross product only operates on vectors with dim = 3!" );
 #endif
-            double c0 = _ptr[1]*B._ptr[2] - _ptr[2]*B._ptr[1];
-            double c1 = _ptr[2]*B._ptr[0] - _ptr[0]*B._ptr[2];
-            double c2 = _ptr[0]*B._ptr[1] - _ptr[1]*B._ptr[0];
+            double c0 = _ptr[ 1 ]*B._ptr[ 2 ] - _ptr[ 2 ]*B._ptr[ 1 ];
+            double c1 = _ptr[ 2 ]*B._ptr[ 0 ] - _ptr[ 0 ]*B._ptr[ 2 ];
+            double c2 = _ptr[ 0 ]*B._ptr[ 1 ] - _ptr[ 1 ]*B._ptr[ 0 ];
 
-            return RealVector({c0, c1, c2});
+            return RealVector( { c0, c1, c2 } );
         }
 
         // Dimensions of vector
@@ -277,20 +283,20 @@ namespace broomstyx
         {
 #ifndef NDEBUG
             if ( B._dim != _dim )
-                throw std::runtime_error("\nSize mismatch in vector dot product!\ndim(A) = " + std::to_string(_dim) + ", dim(B) = " 
-                        + std::to_string(B._dim));
+                throw std::runtime_error( "\nSize mismatch in vector dot product!\ndim(A) = " + std::to_string( _dim )
+                      + ", dim(B) = " + std::to_string( B._dim ) );
 #endif
-            return cblas_ddot(_dim, _ptr, 1, B._ptr, 1);
+            return cblas_ddot( _dim, _ptr, 1, B._ptr, 1 );
         }
 
         double dot( RealVector&& B )
         {
 #ifndef NDEBUG
             if ( B._dim != _dim )
-                throw std::runtime_error("\nSize mismatch in vector dot product!\ndim(A) = " + std::to_string(_dim) + ", dim(B) = "
-                        + std::to_string(B._dim));
+                throw std::runtime_error( "\nSize mismatch in vector dot product!\ndim(A) = " + std::to_string( _dim )
+                      + ", dim(B) = " + std::to_string( B._dim ) );
 #endif
-            return cblas_ddot(_dim, _ptr, 1, B._ptr, 1);
+            return cblas_ddot( _dim, _ptr, 1, B._ptr, 1 );
         }
 
         // Erase contents
@@ -308,7 +314,7 @@ namespace broomstyx
         {
 #ifndef NDEBUG
             if ( dim < 1 )
-                throw std::runtime_error("\nCannot initialize RealVector with dim = " + std::to_string(dim));
+                throw std::runtime_error( "\nCannot initialize RealVector with dim = " + std::to_string( dim ) );
 #endif
             if ( _ptr )
                 delete[] _ptr;
@@ -320,27 +326,27 @@ namespace broomstyx
         // Show contents of matrix in scientific precision
         void print( const char *s, int n ) const
         {
-            std::printf("\nRealVector %s:\n\n", s);
+            std::printf( "\nRealVector %s:\n\n", s );
             
             if ( !_ptr )
-                std::printf("...is empty\n");
+                std::printf( "...is empty\n" );
             else
             {
-                std::printf("\n");
+                std::printf( "\n" );
                 for ( int i = 0; i < _dim; i++ )
-                    std::printf("%*.*e\n", n+10, n, _ptr[i]);
+                    std::printf( "%*.*e\n", n + 10, n, _ptr[ i ] );
             }
-            std::printf("\n");
+            std::printf( "\n" );
         }
 
         // Print contents to file
         void printTo( FILE* fp, int n ) const
         {
             if ( !_ptr )
-                std::fprintf(fp, "...is empty\n");
+                std::fprintf( fp, "...is empty\n" );
             else
                 for ( int i = 0; i < _dim; i++ )
-                    std::fprintf(fp, "%*.*e\n", n+10, n, _ptr[i]);
+                    std::fprintf( fp, "%*.*e\n", n + 10, n, _ptr[ i ] );
         }
         
         // Give pointer to vector components
@@ -352,7 +358,7 @@ namespace broomstyx
             int dimB = B.dim();
             RealMatrix C( _dim, dimB );
             
-            cblas_dger(CblasColMajor, _dim, dimB, 1.0, _ptr, 1, B._ptr, 1, C.ptr(), _dim);
+            cblas_dger( CblasColMajor, _dim, dimB, 1.0, _ptr, 1, B._ptr, 1, C.ptr(), _dim );
 
             return C;
         }
@@ -362,7 +368,7 @@ namespace broomstyx
             int dimB = B.dim();
             RealMatrix C( _dim, dimB );
             
-            cblas_dger(CblasColMajor, _dim, dimB, 1.0, _ptr, 1, B._ptr, 1, C.ptr(), _dim);
+            cblas_dger( CblasColMajor, _dim, dimB, 1.0, _ptr, 1, B._ptr, 1, C.ptr(), _dim );
 
             return C;
         }
