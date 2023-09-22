@@ -65,7 +65,7 @@ namespace broomstyx
         RealVector( std::initializer_list<double> initList )
         {
             _dim = (int)initList.size();
-            _ptr = new double[ _dim ]();
+            _ptr = new double[ _dim ];
 
             std::copy( initList.begin(), initList.end(), _ptr );
         }
