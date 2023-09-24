@@ -46,7 +46,7 @@ DofManager::DofManager()
     _numericsDof.assign( 0, nullptr );
 }
 // ----------------------------------------------------------------------------
-DofManager::~DofManager() {}
+DofManager::~DofManager() = default;
 // ----------------------------------------------------------------------------
 // Public methods
 //void DofManager::addToSecondaryVariableAt( Dof* targetDof, double val )
@@ -59,8 +59,8 @@ DofManager::~DofManager() {}
 // ----------------------------------------------------------------------------
 void DofManager::createCellDofsAt( Cell* targetCell )
 {
-    int dim = targetCell->_dim;
-    int nDofs = _cellDofInfo[ dim ].size();
+    int dim = analysisModel().domainManager().giveDimensionOfPhysicalEntity( targetCell->label() );
+    int nDofs = (int)_cellDofInfo[ dim ].size();
     targetCell->_dof.assign( nDofs, nullptr );
     for ( int i = 0; i < nDofs; i++ )
         targetCell->_dof[ i ] = new Dof( _cellDofInfo[ dim ][ i ].group );
@@ -76,7 +76,7 @@ void DofManager::createCellDofsAt( Cell* targetCell )
 // ----------------------------------------------------------------------------
 void DofManager::createNodalDofsAt( Node* targetNode )
 {
-    int dofsPerNode = _nodalDofInfo.size();
+    int dofsPerNode = (int)_nodalDofInfo.size();
     targetNode->_dof.assign( dofsPerNode, nullptr );
     for ( int i = 0; i < dofsPerNode; i++ )
         targetNode->_dof[ i ] = new Dof( _nodalDofInfo[ i ].group );
@@ -92,7 +92,7 @@ void DofManager::createNodalDofsAt( Node* targetNode )
 // ----------------------------------------------------------------------------
 void DofManager::destroyCellDofsAt( Cell* targetCell )
 {
-    int nDofs = targetCell->_dof.size();
+    int nDofs = (int)( targetCell->_dof.size() );
     for ( int i = 0; i < nDofs; i++ )
         if ( targetCell->_dof[ i ] )
         {
@@ -113,7 +113,7 @@ void DofManager::destroyCellDofsAt( Cell* targetCell )
 // ----------------------------------------------------------------------------
 void DofManager::destroyNodalDofsAt( Node* targetNode )
 {
-    int nDofs = targetNode->_dof.size();
+    int nDofs = (int)( targetNode->_dof.size() );
     for ( int i = 0; i < nDofs; i++ )
         if ( targetNode->_dof[ i ] )
         {
@@ -146,7 +146,7 @@ void DofManager::finalizeDofPrimaryValuesAtStage( int stage )
 
         for ( int j = 0; j < (int)_nodalDofInfo.size(); j++ )
         {
-            Dof *targetDof = analysisModel().domainManager().giveNodalDof(j, targetNode);
+            Dof *targetDof = DomainManager::giveNodalDof( j, targetNode );
             if ( targetDof->_stage == stage )
             {
                 if ( targetDof->_isSlave )
@@ -717,7 +717,7 @@ void DofManager::imposeNodalDofSlaveConstraint( MultiFreedomConstraint& mfc )
     int masterPhysNum = analysisModel().domainManager().givePhysicalEntityNumberFor( mfc.masterTag );
     int slavePhysNum = analysisModel().domainManager().givePhysicalEntityNumberFor( mfc.slaveTag );
 
-    int dim = analysisModel().domainManager().giveDimensionForPhysicalEntity( masterPhysNum );
+    int dim = analysisModel().domainManager().giveDimensionOfPhysicalEntity( masterPhysNum );
     int nCells = analysisModel().domainManager().giveNumberOfCellsWithDimension( dim );
 
     // Find master node
@@ -725,7 +725,7 @@ void DofManager::imposeNodalDofSlaveConstraint( MultiFreedomConstraint& mfc )
     for ( int i = 0; i < nCells; i++ )
     {
         Cell* candCell = analysisModel().domainManager().giveCell( i, dim );
-        if ( analysisModel().domainManager().giveLabelOf( candCell ) == masterPhysNum )
+        if ( candCell->label() == masterPhysNum )
         {
             std::vector<Node*> node = analysisModel().domainManager().giveNodesOf( candCell );
             if ( (int)node.size() != 1 )
@@ -737,13 +737,13 @@ void DofManager::imposeNodalDofSlaveConstraint( MultiFreedomConstraint& mfc )
     }
 
     // Find slave nodes
-    dim = analysisModel().domainManager().giveDimensionForPhysicalEntity( slavePhysNum );
+    dim = analysisModel().domainManager().giveDimensionOfPhysicalEntity( slavePhysNum );
     nCells = analysisModel().domainManager().giveNumberOfCellsWithDimension( dim );
 
     for ( int i = 0; i < nCells; i++ )
     {
         Cell* candCell = analysisModel().domainManager().giveCell( i, dim );
-        if ( analysisModel().domainManager().giveLabelOf( candCell ) == slavePhysNum )
+        if ( candCell->label() == slavePhysNum )
         {
             std::vector<Node*> node = analysisModel().domainManager().giveNodesOf( candCell );
             for ( int j = 0; j < (int)node.size(); j++)

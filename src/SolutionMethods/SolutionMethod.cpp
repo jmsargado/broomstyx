@@ -53,7 +53,7 @@ void SolutionMethod::imposeConstraintsAt( int stage
     {
         int boundaryId = analysisModel().domainManager().givePhysicalEntityNumberFor( bndCond[ ibc ].boundaryName() );
         Numerics* numerics = analysisModel().numericsManager().giveNumerics( bndCond[ ibc ].targetNumerics() );
-        int dim = analysisModel().domainManager().giveDimensionForPhysicalEntity( boundaryId );
+        int dim = analysisModel().domainManager().giveDimensionOfPhysicalEntity( boundaryId );
         
         int nBCells = analysisModel().domainManager().giveNumberOfCellsWithDimension( dim );
 #ifdef _OPENMP
@@ -62,7 +62,7 @@ void SolutionMethod::imposeConstraintsAt( int stage
         for ( int iCell = 0; iCell < nBCells; iCell++ )
         {
             Cell* curCell = analysisModel().domainManager().giveCell( iCell, dim );
-            int label = analysisModel().domainManager().giveLabelOf( curCell );
+            int label = curCell->label();
 
             if ( label == boundaryId )
             {
@@ -115,7 +115,7 @@ bool broomstyx::SolutionMethod::checkConvergenceOfNumericsAt( int stage )
         for ( int iCell = 0; iCell < nCells; iCell++ )
         {
             Cell *curCell = analysisModel().domainManager().giveCell( iCell, dim );
-            int label = analysisModel().domainManager().giveLabelOf( curCell );
+            int label = curCell->label();
             Numerics *numerics = analysisModel().domainManager().giveNumericsForDomain( label, stage );
 
             bool cellConverged = numerics->performAdditionalConvergenceCheckAt( curCell, stage );

@@ -247,7 +247,7 @@ void LoadStep::solveYourself()
             for ( int iCell = 0; iCell < nCells; iCell++ )
             {
                 Cell *curCell = analysisModel().domainManager().giveCell( iCell, dim );
-                int cellLabel = analysisModel().domainManager().giveLabelOf( curCell );
+                int cellLabel = curCell->label();
 
                 for ( int i = 0; i < (int) _preProcess.size(); i++ )
                 {
@@ -446,7 +446,7 @@ void LoadStep::solveYourself()
             for ( int iCell = 0; iCell < nCells; iCell++ )
             {
                 Cell *curCell = analysisModel().domainManager().giveCell( iCell, dim );
-                int cellLabel = analysisModel().domainManager().giveLabelOf( curCell );
+                int cellLabel = curCell->label();
 
                 for ( int i = 0; i < (int) _postProcess.size(); i++ )
                 {
@@ -510,13 +510,13 @@ void LoadStep::findConstrainedDofsAtStage( int stage )
             int targetDofNum = analysisModel().dofManager().giveIndexForNodalDof( curBC.targetDof() );
 
             int physNum = analysisModel().domainManager().givePhysicalEntityNumberFor( curBC.boundaryName() );
-            int dim = analysisModel().domainManager().giveDimensionForPhysicalEntity( physNum );
+            int dim = analysisModel().domainManager().giveDimensionOfPhysicalEntity( physNum );
 
             int nCells = analysisModel().domainManager().giveNumberOfCellsWithDimension( dim );
             for ( int i = 0; i < nCells; i++ )
             {
                 Cell* curCell = analysisModel().domainManager().giveCell( i, dim );
-                int label = analysisModel().domainManager().giveLabelOf( curCell );
+                int label = curCell->label();
 
                 if ( label == boundaryId )
                 {
@@ -537,17 +537,17 @@ void LoadStep::findConstrainedDofsAtStage( int stage )
             int targetDofNum = analysisModel().dofManager().giveIndexForCellDof( curBC.targetDof() );
 
             int physNum = analysisModel().domainManager().givePhysicalEntityNumberFor( curBC.boundaryName() );
-            int dim = analysisModel().domainManager().giveDimensionForPhysicalEntity( physNum );
+            int dim = analysisModel().domainManager().giveDimensionOfPhysicalEntity( physNum );
 
             int nCells = analysisModel().domainManager().giveNumberOfCellsWithDimension( dim );
             for ( int i = 0; i < nCells; i++ )
             {
                 Cell* curCell = analysisModel().domainManager().giveCell( i, dim );
-                int label = analysisModel().domainManager().giveLabelOf( curCell );
+                int label = curCell->label();
 
                 if ( label == boundaryId )
                 {
-                    Dof* targetDof = analysisModel().domainManager().giveCellDof( targetDofNum, curCell );
+                    Dof* targetDof = DomainManager::giveCellDof( targetDofNum, curCell );
                     analysisModel().dofManager().putDirichletConstraintOn( targetDof );
                 }
             }

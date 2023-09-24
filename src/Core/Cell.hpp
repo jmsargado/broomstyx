@@ -41,7 +41,7 @@ namespace broomstyx
 
     public:
         // Constructor with arguments
-        Cell( int elType, int label, int dim );
+        Cell( int id, int elType, int label );
         
         // Destructor
         virtual ~Cell();
@@ -53,14 +53,15 @@ namespace broomstyx
 
         RealVector cellData;
         std::vector<NumericsStatus*> numericsStatus;
-        
-        int  id();
+
+        int  dimension() const;
+        int  id() const;
+        int  label() const;
         void showInfo();
 
     private:
         int _elType;
         int _label;
-        int _dim;
         int _id;
         int _partition;
 
@@ -69,6 +70,8 @@ namespace broomstyx
         std::vector<Dof*>  _dof;
         std::set<Cell*>    _attachedCell[4];
         std::vector<Cell*> _neighbor;
+
+        std::vector<int> _halo;
     };
 }
 

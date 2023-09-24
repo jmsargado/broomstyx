@@ -27,7 +27,6 @@
 #include "User/UserFunction.hpp"
 #include "Util/readOperations.hpp"
 #include "AnalysisModel.hpp"
-#include "DofManager.hpp"
 
 using namespace broomstyx;
 

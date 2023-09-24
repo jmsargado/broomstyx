@@ -57,12 +57,12 @@ namespace broomstyx
         };
         
         void                   createPhysicalEntity( int dim, int number, const std::string& label );
-        int                    giveDimensionForPhysicalEntity( int n ) const;
+        int                    giveDimensionOfPhysicalEntity( int physEntNum ) const;
         PhysicalEntity         givePhysicalEntity( int n ) const;
         std::vector<Material*> giveMaterialSetForDomain( int label, int stage ) const;
         int                    giveNumberOfPhysicalNames();
         Numerics*              giveNumericsForDomain( int label, int stage ) const;
-        std::string            givePhysicalEntityNameFor( int physEntNum ) const;
+        std::string            giveNameOfPhysicalEntity( int physEntNum ) const;
         int                    givePhysicalEntityNumberFor( const std::string& name ) const;
         void                   readDomainAssignmentsFrom( FILE* fp );
 
@@ -88,28 +88,30 @@ namespace broomstyx
         void  finalizeCellDataAt( const TimeData& time, int stage );
         void  findCellAttachments();
         void  findCellsAttachedTo( Cell* targetCell );
+        void  formDomainPartitions();
         Cell* giveCell( int num, int dim );
-        Dof*  giveCellDof( int dofNum, Cell* targetCell );
+        static Dof*  giveCellDof( int dofNum, Cell* targetCell );
 //        Cell* giveDomainCellInPartition( int partNum, int cellNum );
-        int   giveElementTypeOf( Cell* targetCell );
-        int   giveIdOf( Cell *targetCell );
-        int   giveLabelOf( Cell *targetCell );
-        std::vector<Cell*> giveNeighborsOf( Cell* targetCell );
+        static int   giveElementTypeOf( Cell* targetCell );
+        static int   giveIdOf( Cell *targetCell );
+        static std::vector<Cell*> giveNeighborsOf( Cell* targetCell );
         static std::vector<Node*> giveNodesOf( Cell* targetCell );
         int   giveNumberOfCellsWithDimension( int dim );
         static int   giveNumberOfNodesOf( Cell* targetCell );
-        Numerics* giveNumericsFor( Cell* targetCell, int stage );
+        Numerics* giveNumericsFor( Cell* targetCell, int stage ) const;
         void  initializeMaterialsAtCells();
         void  initializeNumericsAtCells();
-        Cell* makeNewCell( int elType, int cellLabel, int dim );
-        void  mustConstructFaces();
+        Cell* makeNewCell( int id, int elType, int label );
+//        void  mustConstructFaces();
         void  readNumberOfFieldsPerCellFrom( FILE* fp );
         void  removeAllCellConstraints();
         void  reorderNodesOf( Cell* targetCell, std::vector<int>& reordering );
         void  reportDetailedStatus();
         void  reportStatus();
-        static void  setElementTypeOf( Cell* targetCell, int elemType );
+        static void setElementTypeOf( Cell* targetCell, int elemType );
+        static void setHaloOf( Cell *targetCell, std::vector<int>& halo );
         void  setNodesOf( Cell* targetCell, std::vector<int>& cellNodes );
+        static void setPartitionOf( Cell* targetCell, int partition );
 
     private:
         std::string _name;

@@ -22,7 +22,6 @@
 #include "DomainManager.hpp"
 #include <chrono>
 #include <stdexcept>
-#include <omp.h>
 
 #include "AnalysisModel.hpp"
 #include "Cell.hpp"
@@ -30,8 +29,6 @@
 #include "MaterialManager.hpp"
 #include "Node.hpp"
 #include "NumericsManager.hpp"
-#include "SolutionManager.hpp"
-#include "MeshReaders/MeshReader.hpp"
 #include "Numerics/Numerics.hpp"
 #include "Util/readOperations.hpp"
 
@@ -76,9 +73,24 @@ void DomainManager::createPhysicalEntity( int dim, int number, const std::string
     _physEnt.push_back( newPhysEnt );
 }
 // ----------------------------------------------------------------------------
-int DomainManager::giveDimensionForPhysicalEntity( int n ) const
+int DomainManager::giveDimensionOfPhysicalEntity( int physEntNum ) const
 {
-    return _physEnt[ n ].dimension;
+    int dim;
+    bool success = false;
+
+    for ( auto& curPhysEnt : _physEnt )
+        if ( physEntNum == curPhysEnt.entityNumber )
+        {
+            dim = curPhysEnt.dimension;
+            success = true;
+            break;
+        }
+
+    if ( !success )
+        throw std::runtime_error( "Failed to find dimension corresponding to physical entity number '"
+            + std::to_string( physEntNum ) + "'!\nSource: " + _name );
+
+    return dim;
 }
 // ----------------------------------------------------------------------------
 DomainManager::PhysicalEntity DomainManager::givePhysicalEntity( int n ) const
@@ -95,7 +107,7 @@ std::vector<Material*> DomainManager::giveMaterialSetForDomain( int label, int s
     }
     catch( const std::exception& e )
     {
-        std::string name = this->givePhysicalEntityNameFor( label );
+        std::string name = this->giveNameOfPhysicalEntity( label );
         throw std::runtime_error( "No Material set defined for '" + name + "' at stage "
             + std::to_string( stage ) + "!\n" );
     }
@@ -122,7 +134,7 @@ Numerics* DomainManager::giveNumericsForDomain( int label, int stage ) const
     return numerics;
 }
 // ----------------------------------------------------------------------------
-std::string DomainManager::givePhysicalEntityNameFor( int physEntNum ) const
+std::string DomainManager::giveNameOfPhysicalEntity( int physEntNum ) const
 {
     std::string physEntName;
     bool success = false;
@@ -420,6 +432,7 @@ void DomainManager::findCellAttachments()
 void DomainManager::findCellsAttachedTo( Cell* targetCell )
 {
     std::vector<Node*> cellNode = targetCell->_node;
+    int cellDim = targetCell->dimension();
     int nCellNodes = cellNode.size();
 
     for ( int curDim = 0; curDim < 4; curDim++ )
@@ -428,7 +441,7 @@ void DomainManager::findCellsAttachedTo( Cell* targetCell )
         {
             std::set<Cell*> candidate = this->giveCellsAttachedTo( cellNode[ curNode ], curDim );
 
-            if ( targetCell->_dim < curDim )
+            if ( cellDim < curDim )
             {
                 // All nodes of targetCell must also be nodes of candidate attached cell
                 bool candidateIsAttached = true;
@@ -448,11 +461,11 @@ void DomainManager::findCellsAttachedTo( Cell* targetCell )
                     if ( candidateIsAttached )
                     {
                         targetCell->_attachedCell[ curDim ].insert( *it );
-                        (*it)->_attachedCell[ targetCell->_dim ].insert( targetCell );
+                        (*it)->_attachedCell[ cellDim ].insert( targetCell );
                     }
                 }
             }
-            else if ( targetCell->_dim > curDim )
+            else if ( cellDim > curDim )
             {
                 // All nodes of candidate attached cell must also be nodes of targetCell
                 bool candidateIsAttached = true;
@@ -472,13 +485,13 @@ void DomainManager::findCellsAttachedTo( Cell* targetCell )
                     if ( candidateIsAttached )
                     {
                         targetCell->_attachedCell[ curDim ].insert( *it );
-                        (*it)->_attachedCell[ targetCell->_dim ].insert( targetCell );
+                        (*it)->_attachedCell[ cellDim ].insert( targetCell );
                     }
                 }
             }
             else
             {
-                // ( targetCell->_dim == curDim )
+                // ( cellDim == curDim )
                 // targetCell and candidate attached cell must share a face
                 int nFaces = analysisModel().meshReader().giveNumberOfFacesForElementType( targetCell->_elType );
                 targetCell->_neighbor.assign( nFaces, nullptr );
@@ -516,6 +529,39 @@ void DomainManager::findCellsAttachedTo( Cell* targetCell )
     }
 }
 // ----------------------------------------------------------------------------
+void DomainManager::formDomainPartitions()
+{
+    // Determine number of partitions
+    int highestPartitionNum = 0;
+    for ( int dim : { 0, 1, 2, 3} )
+        for ( auto& i : _cell[ dim ] )
+            if ( i->_partition > highestPartitionNum )
+                highestPartitionNum = i->_partition;
+
+    // Count number of cells in each partition
+    std::vector<int> partitionCellCount;
+
+    partitionCellCount.assign( highestPartitionNum + 1, 0 );
+    for ( int dim : { 0, 1, 2, 3} )
+        for ( auto& i : _cell[ dim ] )
+            partitionCellCount[ i->_partition ] += 1;
+
+    // Create cell address vector for each partition
+    _partition.assign( highestPartitionNum + 1, std::vector<Cell*>() );
+    for ( int i = 0; i <= highestPartitionNum; i++)
+    {
+        _partition[i].assign( partitionCellCount[ i ], nullptr );
+        partitionCellCount[ i ] = 0;
+    }
+
+    for ( int dim : { 0, 1, 2, 3} )
+        for ( auto& i : _cell[ dim ] )
+        {
+            int cellPartition = i->_partition;
+            _partition[ cellPartition ][ partitionCellCount[ cellPartition ]++ ] = i;
+        }
+}
+// ----------------------------------------------------------------------------
 Cell* DomainManager::giveCell( int num, int dim )
 {
     return _cell[ dim ][ num ];
@@ -536,11 +582,6 @@ int DomainManager::giveIdOf( Cell *targetCell )
     return targetCell->_id;
 }
 // ----------------------------------------------------------------------------
-int DomainManager::giveLabelOf( Cell *targetCell )
-{
-    return targetCell->_label;
-}
-// ----------------------------------------------------------------------------
 std::vector<Cell*> DomainManager::giveNeighborsOf( Cell* targetCell )
 {
     return targetCell->_neighbor;
@@ -558,10 +599,10 @@ int DomainManager::giveNumberOfCellsWithDimension( int dim )
 // ----------------------------------------------------------------------------
 int DomainManager::giveNumberOfNodesOf( Cell *targetCell )
 {
-    return targetCell->_node.size();
+    return (int)targetCell->_node.size();
 }
 // ----------------------------------------------------------------------------
-Numerics* DomainManager::giveNumericsFor( Cell* targetCell, int stage )
+Numerics* DomainManager::giveNumericsFor( Cell* targetCell, int stage ) const
 {
     return this->giveNumericsForDomain( targetCell->_label, stage );
 }
@@ -626,10 +667,11 @@ void DomainManager::initializeNumericsAtCells()
     std::printf( "done (time = %f sec.)\n", tictoc.count() );
 }
 // ----------------------------------------------------------------------------
-Cell* DomainManager::makeNewCell( int elType, int cellLabel, int dim )
+Cell* DomainManager::makeNewCell( int id,  int elType, int label )
 {
     // Instantiate new cells
-    Cell* newCell = new Cell( elType, cellLabel, dim );
+    Cell* newCell = new Cell( id, elType, label );
+    int dim = this->giveDimensionOfPhysicalEntity( label );
 
     // Add new cell object to relevant list
     _cellList[ dim ].push_back( newCell );
@@ -735,18 +777,29 @@ void DomainManager::setElementTypeOf( Cell* targetCell, int elemType )
     targetCell->_elType = elemType;
 }
 // ----------------------------------------------------------------------------
+void DomainManager::setHaloOf( Cell *targetCell, std::vector<int>& halo )
+{
+    targetCell->_halo = halo;
+}
+// ----------------------------------------------------------------------------
 void DomainManager::setNodesOf( Cell *targetCell, std::vector<int>& cellNodes )
 {
     // Important: this method must not be called from within a loop that is
     // parallelized since std::set is not thread safe!
-    
+
+    int cellDim = targetCell->dimension();
     std::vector<Node*> node( cellNodes.size(), nullptr );
     
     for ( int i = 0; i < (int)cellNodes.size(); i++ )
     {
         node[ i ] = _node[ cellNodes[ i ] ];
-        node[ i ]->_attachedCell[ targetCell->_dim ].insert( targetCell );
+        node[ i ]->_attachedCell[ cellDim ].insert( targetCell );
     }
     
     targetCell->_node = node;
+}
+// ----------------------------------------------------------------------------
+void DomainManager::setPartitionOf( Cell* targetCell, int partition )
+{
+    targetCell->_partition = partition;
 }

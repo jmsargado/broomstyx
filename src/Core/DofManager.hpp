@@ -60,11 +60,11 @@ namespace broomstyx
 ////        void   createFaceDofsAt( Cell* targetFace );
         void   createNodalDofsAt( Node* targetNode );
 //        Dof*   createNumericsDofWithGroup( int grp );
-        void   destroyCellDofsAt( Cell* targetCell );
+        static void   destroyCellDofsAt( Cell* targetCell );
 //        void   destroyFaceDofsAt( Cell* targetFace );
-        void   destroyNodalDofsAt( Node* targetNode );
+        static void   destroyNodalDofsAt( Node* targetNode );
 //        void   destroyNumericsDof( Dof*& targetDof );
-        void   enslave( Dof* targetDof, Dof* masterDof );
+        static void   enslave( Dof* targetDof, Dof* masterDof );
         void   finalizeDofPrimaryValuesAtStage( int stage );
         void   findActiveDofs();
 //        std::vector<Dof*> giveActiveDofsAtStage( int stg );

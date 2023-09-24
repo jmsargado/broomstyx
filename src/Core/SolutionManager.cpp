@@ -118,7 +118,7 @@ void SolutionManager::imposeInitialConditions()
         std::string domainLabel = _initCond[ i ].domainLabel();
         std::string condType = _initCond[ i ].conditionType();
         int domainId = analysisModel().domainManager().givePhysicalEntityNumberFor( domainLabel );
-        int dim = analysisModel().domainManager().giveDimensionForPhysicalEntity( domainId );
+        int dim = analysisModel().domainManager().giveDimensionOfPhysicalEntity( domainId );
 
         int nCells = analysisModel().domainManager().giveNumberOfCellsWithDimension( dim );
 
@@ -130,7 +130,7 @@ void SolutionManager::imposeInitialConditions()
             for ( int j = 0; j < nCells; j++ )
             {
                 Cell* curCell = analysisModel().domainManager().giveCell( j, dim );
-                int cellLabel = analysisModel().domainManager().giveLabelOf( curCell );
+                int cellLabel = curCell->label();
 
                 if ( cellLabel == domainId )
                 {
@@ -156,7 +156,7 @@ void SolutionManager::imposeInitialConditions()
             for ( int j = 0; j < nCells; j++ )
             {
                 Cell* curCell = analysisModel().domainManager().giveCell( j, dim );
-                int cellLabel = analysisModel().domainManager().giveLabelOf( curCell );
+                int cellLabel = curCell->label();
 
                 if ( cellLabel == domainId )
                 {

@@ -364,7 +364,7 @@ void Numerics::setDofStagesAt( Cell* targetCell )
 // ----------------------------------------------------------------------------
 std::vector<Material*> Numerics::giveMaterialSetFor( Cell* targetCell, int stage )
 {
-    int label = analysisModel().domainManager().giveLabelOf( targetCell );
+    int label = targetCell->label();
     return analysisModel().domainManager().giveMaterialSetForDomain( label, stage );
 }
 // ----------------------------------------------------------------------------

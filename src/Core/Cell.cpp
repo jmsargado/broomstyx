@@ -22,46 +22,60 @@
 #include "Cell.hpp"
 
 #include "AnalysisModel.hpp"
+#include "DomainManager.hpp"
 #include "Dof.hpp"
 #include "Node.hpp"
 
 using namespace broomstyx;
 
-Cell::Cell( int elType, int label, int dim )
+Cell::Cell( int id, int elType, int label )
     : _elType( elType )
     , _label( label )
-    , _dim( dim )
+    , _id( id )
+    , _partition( 0 )
 {}
 
-Cell::~Cell() {}
+Cell::~Cell() = default;
 
-
-int Cell::id()
+// Public methods
+// ---------------------------------------------------------------------------------------
+int Cell::dimension() const
+{
+    return analysisModel().domainManager().giveDimensionOfPhysicalEntity( _label );
+}
+// ---------------------------------------------------------------------------------------
+int Cell::id() const
 {
     return _id;
 }
-
+// ---------------------------------------------------------------------------------------
+int Cell::label() const
+{
+    return _label;
+}
+// ---------------------------------------------------------------------------------------
 void Cell::showInfo()
 {
-    std::printf( "\n  Cell ID = %d, label = %d, dim = %d\n", _id, _label, _dim );
+    int cellDim = analysisModel().domainManager().giveDimensionOfPhysicalEntity( _label );
+    std::printf( "\n  Cell ID = %d, label = %d, dim = %d\n", _id, _label, cellDim );
 
     std::printf( "  Cell nodes: " );
-    for ( int i = 0; i < (int)_node.size(); ++i )
-        std::printf( "%d ", _node[ i ]->id() );
+    for ( auto& i : _node )
+        std::printf( "%d ", i->id() );
     
     std::printf( "\n  Attached Cells\n" );
-    for ( int dim = 0; dim < 4; dim++ )
+    for ( int dim : { 0, 1, 2, 3 } )
     {
         std::printf( "   dim = %d: ", dim );
-        for ( auto it = _attachedCell[ dim ].begin(); it != _attachedCell[ dim ].end(); it++ )
-            std::printf( "%d ", (*it)->id() );
+        for ( auto& it : _attachedCell[ dim ] )
+            std::printf( "%d ", it->id() );
         std::printf( "\n" );
     }
 
     std::printf( "\n  Neighbors: " );
-    for ( int i = 0; i < (int)_neighbor.size(); ++i )
-        if ( _neighbor[ i ] )
-            std::printf( "%d ", _neighbor[ i ]->id() );
+    for ( auto& i : _neighbor )
+        if ( i )
+            std::printf( "%d ", i->id() );
         else
             std::printf( "none" );
     std::printf( "\n" );

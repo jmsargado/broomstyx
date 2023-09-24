@@ -33,8 +33,8 @@ namespace broomstyx
     class MeshReader
     {
     public:
-        MeshReader() {}
-        virtual ~MeshReader() {}
+        MeshReader() = default;
+        virtual ~MeshReader() = default;
         
         // Disable copy constructor and assignment operator
         MeshReader( const MeshReader& ) = delete;
