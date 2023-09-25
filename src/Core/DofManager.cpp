@@ -20,7 +20,6 @@
 */
 
 #include "DofManager.hpp"
-#include <omp.h>
 #include <stdexcept>
 
 #include "AnalysisModel.hpp"
@@ -28,7 +27,6 @@
 #include "Cell.hpp"
 #include "Node.hpp"
 #include "DomainManager.hpp"
-#include "SolutionManager.hpp"
 #include "MeshReaders/MeshReader.hpp"
 #include "Util/readOperations.hpp"
 
@@ -172,7 +170,7 @@ void DofManager::finalizeDofPrimaryValuesAtStage( int stage )
             Cell *curCell = analysisModel().domainManager().giveCell( i, dim );
             for ( int j = 0; j < (int) _cellDofInfo[ dim ].size(); j++)
             {
-                Dof *targetDof = analysisModel().domainManager().giveCellDof( j, curCell );
+                Dof *targetDof = DomainManager::giveCellDof( j, curCell );
                 if ( targetDof->_stage == stage )
                 {
                     if ( targetDof->_isSlave )
@@ -187,9 +185,9 @@ void DofManager::finalizeDofPrimaryValuesAtStage( int stage )
         }
     }
 
-    for ( int i = 0; i < (int)_numericsDof.size(); i++ )
+    for ( auto& i : _numericsDof )
     {
-        _numericsDof[ i ]->_primVarConverged = _numericsDof[ i ]->_primVarCurrent;
+        i->_primVarConverged = i->_primVarCurrent;
     }
 }
 // ----------------------------------------------------------------------------
@@ -217,7 +215,7 @@ void DofManager::findActiveDofs()
         Node* curNode = analysisModel().domainManager().giveNode( i );
         for ( int j = 0; j < (int)_nodalDofInfo.size(); j++ )
         {
-            Dof* curDof = analysisModel().domainManager().giveNodalDof( j, curNode );
+            Dof* curDof = DomainManager::giveNodalDof( j, curNode );
             if ( !curDof->_isConstrained && !curDof->_isSlave && curDof->_stage != UNASSIGNED )
                 _nActiveDof[ curDof->_stage ]++;
             else if ( curDof->_stage != UNASSIGNED )
@@ -225,7 +223,7 @@ void DofManager::findActiveDofs()
         }
     }
 
-    for ( int dim = 0; dim < 4; dim++ )
+    for ( int dim : { 0, 1, 2, 3 } )
     {
         int nCells = analysisModel().domainManager().giveNumberOfCellsWithDimension( dim );
         for ( int i = 0; i < nCells; i++ )
@@ -233,7 +231,7 @@ void DofManager::findActiveDofs()
             Cell *curCell = analysisModel().domainManager().giveCell( i, dim );
             for ( int j = 0; j < (int) _cellDofInfo[dim].size(); j++ )
             {
-                Dof *curDof = analysisModel().domainManager().giveCellDof( j, curCell );
+                Dof *curDof = DomainManager::giveCellDof( j, curCell );
                 if ( !curDof->_isConstrained && !curDof->_isSlave && curDof->_stage != UNASSIGNED )
                     _nActiveDof[ curDof->_stage ]++;
                 else if ( curDof->_stage != UNASSIGNED )
@@ -242,9 +240,8 @@ void DofManager::findActiveDofs()
         }
     }
 
-    for ( int i = 0; i < (int)_numericsDof.size(); i++ )
+    for ( auto curDof : _numericsDof )
     {
-        Dof* curDof = _numericsDof[i];
         if ( !curDof->_isConstrained && !curDof->_isSlave && curDof->_stage != UNASSIGNED )
             _nActiveDof[ curDof->_stage ]++;
         else if ( curDof->_stage != UNASSIGNED )
@@ -271,7 +268,7 @@ void DofManager::findActiveDofs()
 
             for ( int j = 0; j < (int)_nodalDofInfo.size(); j++ )
             {
-                Dof* targetDof = analysisModel().domainManager().giveNodalDof( j, targetNode );
+                Dof* targetDof = DomainManager::giveNodalDof( j, targetNode );
                 if ( targetDof->_stage == curStage && !targetDof->_isConstrained && !targetDof->_isSlave )
                     _activeDof[ curStage ][ curActiveIdx++ ] = targetDof;
                 else if ( targetDof->_stage == curStage )
@@ -288,7 +285,7 @@ void DofManager::findActiveDofs()
 
                 for ( int j = 0; j < (int)_cellDofInfo[ dim ].size(); j++ )
                 {
-                    Dof* targetDof = analysisModel().domainManager().giveCellDof( j, targetCell );
+                    Dof* targetDof = DomainManager::giveCellDof( j, targetCell );
                     if ( targetDof->_stage == curStage && !targetDof->_isConstrained && !targetDof->_isSlave )
                         _activeDof[ curStage ][ curActiveIdx++ ] = targetDof;
                     else if ( targetDof->_stage == curStage )
@@ -297,9 +294,8 @@ void DofManager::findActiveDofs()
             }
         }
 
-        for ( int i = 0; i < (int)_numericsDof.size(); i++ )
+        for ( auto targetDof : _numericsDof )
         {
-            Dof* targetDof = _numericsDof[i];
             if ( targetDof->_stage == curStage && !targetDof->_isConstrained && !targetDof->_isSlave )
                 _activeDof[ curStage ][ curActiveIdx++ ] = targetDof;
             else if ( targetDof->_stage == curStage )
@@ -324,12 +320,10 @@ int DofManager::giveGroupNumberFor( Dof* targetDof )
 int DofManager::giveIndexForCellDof( const std::string& name )
 {
     int index = -1;
-    for ( int dim = 0; dim < 4; dim++ )
+    for ( int dim : { 0, 1, 2, 3 } )
         for ( int i = 0; i < (int)_cellDofInfo[ dim ].size(); i++ )
-        {
             if ( _cellDofInfo[ dim ][ i ].tag == name )
                 index = i;
-        }
     if ( index < 0 )
         throw std::runtime_error( "ERROR: Cannot give DOF index. Cell DOF '" + name + "' not recognized!\n" );
 
@@ -434,10 +428,10 @@ double DofManager::giveValueOfPrimaryVariableAt( Dof* targetDof, ValueType valTy
 // ----------------------------------------------------------------------------
 void DofManager::imposeMultiFreedomConstraints()
 {
-    for ( int i = 0; i < (int)_multiFreedomConstraint.size(); i++ )
+    for ( auto &i : _multiFreedomConstraint )
     {
-        if ( _multiFreedomConstraint[ i ].type == "NodalDofSlaveConstraint" )
-            this->imposeNodalDofSlaveConstraint( _multiFreedomConstraint[ i ] );
+        if ( i.type == "NodalDofSlaveConstraint" )
+            this->imposeNodalDofSlaveConstraint( i );
         else
             throw std::runtime_error( "ERROR: Unimplemented multi-freedom constraint type!\nSource: " + _name );
     }
@@ -463,6 +457,7 @@ void DofManager::readCellDofsFrom( FILE* fp )
         info.tag = getStringInputFrom( fp, "Failed to read cell DOF tag from input file!", _name );
 
         // Cell dimension
+        verifyKeyword( fp, "CellDimension", _name );
         info.dim = getIntegerInputFrom( fp, "Failed to read cell dimension from input file!", _name );
         if ( info.dim < 0 || info.dim > 3 )
             throw std::runtime_error("ERROR: Invalid value '" + std::to_string( info.dim ) +
@@ -558,7 +553,7 @@ void DofManager::removeAllDofConstraints()
 
         for ( int j = 0; j < (int)_nodalDofInfo.size(); j++ )
         {
-            Dof* targetDof = analysisModel().domainManager().giveNodalDof( j, targetNode );
+            Dof* targetDof = DomainManager::giveNodalDof( j, targetNode );
             targetDof->_isConstrained = false;
         }
     }
@@ -573,7 +568,7 @@ void DofManager::removeAllDofConstraints()
 
             for ( int j = 0; j < (int) _cellDofInfo[ dim ].size(); j++ )
             {
-                Dof *targetDof = analysisModel().domainManager().giveCellDof( j, targetCell );
+                Dof *targetDof = DomainManager::giveCellDof( j, targetCell );
                 targetDof->_isConstrained = false;
             }
         }
@@ -631,27 +626,27 @@ void DofManager::reportNumberOfActiveDofs()
 //    for ( int i = 0; i < (int)_inactiveDof[ stage ].size(); i++ )
 //        _inactiveDof[ stage ][ i ]->_secVar = 0.;
 //}
-//// ----------------------------------------------------------------------------
-//void DofManager::setConstraintValueAt( Dof* targetDof, double val )
-//{
-//    targetDof->_constraintValue = val;
-//    targetDof->_primVarCurrent = val;
-//}
+// ----------------------------------------------------------------------------
+void DofManager::setConstraintValueAt( Dof* targetDof, double val )
+{
+    targetDof->_constraintValue = val;
+    targetDof->_primVarCurrent = val;
+}
 //// ----------------------------------------------------------------------------
 //void DofManager::setEquationNumberFor( Dof* targetDof, int eqNo )
 //{
 //    targetDof->_eqNo = eqNo;
 //}
-//// ----------------------------------------------------------------------------
-//void DofManager::setStageFor( Dof* targetDof, int stgNum )
-//{
-//    if ( targetDof->_stage != UNASSIGNED && targetDof->_stage != stgNum )
-//        throw std::runtime_error( "ERROR: Detected conflict in DOF stage assignment! DOF with previously assigned stage number of '"
-//                + std::to_string( targetDof->_stage ) + "' is being reassigned a stage number of '" + std::to_string( stgNum )
-//                + std::string( "'.\nSource: DofManager" ) );
-//    else
-//        targetDof->_stage = stgNum;
-//}
+// ----------------------------------------------------------------------------
+void DofManager::setStageFor( Dof* targetDof, int stgNum )
+{
+    if ( targetDof->_stage != UNASSIGNED && targetDof->_stage != stgNum )
+        throw std::runtime_error( "ERROR: Detected conflict in DOF stage assignment! DOF with previously assigned stage number of '"
+                + std::to_string( targetDof->_stage ) + "' is being reassigned a stage number of '" + std::to_string( stgNum )
+                + std::string( "'.\nSource: DofManager" ) );
+    else
+        targetDof->_stage = stgNum;
+}
 //// ----------------------------------------------------------------------------
 //void DofManager::setSubsystemFor( Dof* targetDof, int subsysNum )
 //{
@@ -713,7 +708,6 @@ void DofManager::writeConvergedDofValuesTo( Node* targetNode )
 // ----------------------------------------------------------------------------
 void DofManager::imposeNodalDofSlaveConstraint( MultiFreedomConstraint& mfc )
 {
-//    int nBCells = analysisModel().domainManager().giveNumberOfBoundaryCells();
     int masterPhysNum = analysisModel().domainManager().givePhysicalEntityNumberFor( mfc.masterTag );
     int slavePhysNum = analysisModel().domainManager().givePhysicalEntityNumberFor( mfc.slaveTag );
 
@@ -727,11 +721,11 @@ void DofManager::imposeNodalDofSlaveConstraint( MultiFreedomConstraint& mfc )
         Cell* candCell = analysisModel().domainManager().giveCell( i, dim );
         if ( candCell->label() == masterPhysNum )
         {
-            std::vector<Node*> node = analysisModel().domainManager().giveNodesOf( candCell );
+            std::vector<Node*> node = DomainManager::giveNodesOf( candCell );
             if ( (int)node.size() != 1 )
                 throw std::runtime_error( "ERROR: Detected more than one master node in 'NodalDofSlaveConstraint' assignment!\nSource: DofManager" );
 
-            masterDof = analysisModel().domainManager().giveNodalDof( mfc.masterDofNum, node[ 0 ] );
+            masterDof = DomainManager::giveNodalDof( mfc.masterDofNum, node[ 0 ] );
             break;
         }
     }
@@ -745,10 +739,10 @@ void DofManager::imposeNodalDofSlaveConstraint( MultiFreedomConstraint& mfc )
         Cell* candCell = analysisModel().domainManager().giveCell( i, dim );
         if ( candCell->label() == slavePhysNum )
         {
-            std::vector<Node*> node = analysisModel().domainManager().giveNodesOf( candCell );
-            for ( int j = 0; j < (int)node.size(); j++)
+            std::vector<Node*> node = DomainManager::giveNodesOf( candCell );
+            for ( auto& j : node )
             {
-                Dof* slaveDof = analysisModel().domainManager().giveNodalDof( mfc.slaveDofNum, node[ j ] );
+                Dof* slaveDof = DomainManager::giveNodalDof( mfc.slaveDofNum, j );
                 if ( slaveDof != masterDof )
                     this->enslave( slaveDof, masterDof );
             }

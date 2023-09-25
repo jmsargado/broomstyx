@@ -29,7 +29,7 @@
 
 #include "Math/RealVector.hpp"
 
-#define UNASSIGNED -1
+#define UNASSIGNED (-1)
 
 namespace broomstyx
 {    
@@ -72,15 +72,15 @@ namespace broomstyx
         int    giveIndexForCellDof( const std::string& name );
 //        int    giveIndexForFaceDof( const std::string& name );
         int    giveIndexForNodalDof( const std::string& name );
-        int    giveEquationNumberAt( Dof* targetDof );
+        static int    giveEquationNumberAt( Dof* targetDof );
 //        int    giveNumberOfActiveDofsAtStage( int stgNum );
 //        int    giveSubsystemNumberFor( Dof* targetDof );
 //        double giveValueOfConstraintAt( Dof* targetDof, ValueType valType );
-        double giveValueOfPrimaryVariableAt( Dof* targetDof, ValueType valType );
+        static double giveValueOfPrimaryVariableAt( Dof* targetDof, ValueType valType );
 //        double giveValueOfSecondaryVariableAt( Dof* targetDof );
 //        double giveValueOfResidualAt( Dof* targetDof );
         void   imposeMultiFreedomConstraints();
-        void   putDirichletConstraintOn( Dof* targetDof );
+        static void   putDirichletConstraintOn( Dof* targetDof );
         void   readCellDofsFrom( FILE* fp );
 //        void   readFaceDofsFrom( FILE* fp );
         void   readMultiFreedomConstraintsFrom( FILE* fp );
@@ -89,11 +89,11 @@ namespace broomstyx
         void   reportNumberOfActiveDofs();
 //        void   resetDofCurrentPrimaryValues();
 //        void   resetSecondaryVariablesAtStage( int stage );
-//        void   setConstraintValueAt( Dof* targetDof, double val );
+        static void   setConstraintValueAt( Dof* targetDof, double val );
 //        void   setEquationNumberFor( Dof* targetDof, int eqNo );
-//        void   setStageFor( Dof* targetDof, int stgNum );
+        static void   setStageFor( Dof* targetDof, int stgNum );
 //        void   setSubsystemFor( Dof* targetDof, int subsysNum );
-        void   updatePrimaryVariableAt( Dof* targetDof, double val, ValueType valType );
+        static void   updatePrimaryVariableAt( Dof* targetDof, double val, ValueType valType );
 //        void   updateResidualAt( Dof* targetDof, double val );
         void   writeConvergedDofValuesTo( Node* targetNode );
 
