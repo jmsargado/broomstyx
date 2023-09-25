@@ -20,7 +20,6 @@
 */
 
 #include "Numerics.hpp"
-#include <cstring>
 #include <stdexcept>
 
 #include "Core/AnalysisModel.hpp"
@@ -31,24 +30,25 @@
 using namespace broomstyx;
 
 // Numerics status
-NumericsStatus::NumericsStatus() {}
+NumericsStatus::NumericsStatus() = default;
 
-NumericsStatus::~NumericsStatus() {}
+NumericsStatus::~NumericsStatus() = default;
 
 // Numerics
-Numerics::Numerics() 
-    : _label( 0 )
+Numerics::Numerics()
+    : _id( 0 )
+    , _stage( 0 )
+    , _stageAssigned( false )
     , _dim( 0 )
-    , _dofPerCell( 0 )
-    , _dofPerNode( 0 )
+    , _nDofsPerCell( 0 )
+    , _nDofsPerNode( 0 )
     , _nMaterials( 0 )
     , _nNodes( 0 )
-    , _nStages( 0 )
     , _nSubsystems( 0 )
     , _nCellFieldOutput( 0 )
 {}
 
-Numerics::~Numerics() {}
+Numerics::~Numerics() = default;
 
 //  Public methods
 // ----------------------------------------------------------------------------
@@ -73,13 +73,49 @@ Numerics::giveCellFieldOutputAtEvaluationPointsOf( Cell* targetCell, int fieldNu
     auto result = this->giveFieldOutputAt( targetCell, fieldTag );
     return result;
 }
-int Numerics::giveSpatialDimension()
+// ----------------------------------------------------------------------------
+int Numerics::giveSpatialDimension() const
 {
     return _dim;
 }
 // ----------------------------------------------------------------------------
+int Numerics::requiredNumberOfDofsPerCell() const
+{
+    return _nDofsPerCell;
+}
+// ----------------------------------------------------------------------------
+int Numerics::requiredNumberOfMaterials() const
+{
+    return _nMaterials;
+}
+// ----------------------------------------------------------------------------
+int Numerics::requiredNumberOfDofsPerNode() const
+{
+    return _nDofsPerNode;
+}
+// ----------------------------------------------------------------------------
+int Numerics::requiredNumberOfNodes() const
+{
+    return _nNodes;
+}
+// ----------------------------------------------------------------------------
+void Numerics::setIdTo( int id )
+{
+    _id = id;
+}
+// ----------------------------------------------------------------------------
+void Numerics::setStageTo( int stage )
+{
+    if ( !_stageAssigned )
+    {
+        _stage = stage;
+        _stageAssigned = true;
+    }
+    else
+        throw std::runtime_error( "Cannot reassign stage for Numerics # " + std::to_string( _id ) + "!\n" );
+}
+// ----------------------------------------------------------------------------
 void Numerics::imposeConstraintAt( Cell*                    targetCell
-                                 , int                      stage
                                  , const BoundaryCondition& bndCond
                                  , const TimeData&          time )
 {
@@ -88,13 +124,13 @@ void Numerics::imposeConstraintAt( Cell*                    targetCell
 // ----------------------------------------------------------------------------
 void Numerics::initializeMaterialsAt( Cell* targetCell ) {}
 // ----------------------------------------------------------------------------
-bool Numerics::performAdditionalConvergenceCheckAt( Cell* targetCell, int stage )
+bool Numerics::performAdditionalConvergenceCheckAt( Cell* targetCell )
 {
     // Does nothing if no special convergence criteria are defined.
     return true;
 }
 // ----------------------------------------------------------------------------
-void Numerics::performPreIterationOperationsAt( int stage, int iterNum )
+void Numerics::performPreIterationOperationsAt( int iterNum )
 {    
     // Does nothing. Overloading method should be implemented in derived class
     // as needed.
@@ -111,7 +147,7 @@ void Numerics::performPreprocessingAt( Cell* targetCell, std::string tag )
     this->error_unimplemented( "performPreprocessingAt(..)" );
 }
 // ----------------------------------------------------------------------------
-void Numerics::printPostIterationMessage( int stage )
+void Numerics::printPostIterationMessage()
 {
     // Does nothing. Overloading method should be implemented in derived class as needed
 }
@@ -123,11 +159,11 @@ void Numerics::readDataFrom( FILE* fp )
     std::string str;
     
     // Nodal degrees of freedom to be used for numerics type
-    if ( _dofPerNode > 0 )
+    if ( _nDofsPerNode > 0 )
     {
         verifyKeyword( fp, str = "NodalDof", _name );
-        _nodalDof.assign( _dofPerNode, 0 );
-        for ( int i = 0; i < _dofPerNode; i++ )
+        _nodalDof.assign( _nDofsPerNode, 0 );
+        for ( int i = 0; i < _nDofsPerNode; i++ )
         {
             std::string name = getStringInputFrom( fp, "Failed to read nodal DOF assignment from input file!", _name );
             _nodalDof[ i ] = analysisModel().dofManager().giveIndexForNodalDof( name );
@@ -135,11 +171,11 @@ void Numerics::readDataFrom( FILE* fp )
     }
     
     // Cell degrees of freedom to be used for numerics type
-    if ( _dofPerCell > 0 )
+    if ( _nDofsPerCell > 0 )
     {
         verifyKeyword( fp, str = "CellDof", _name );
-        _cellDof.assign( _dofPerCell, 0 );
-        for ( int i = 0; i < _dofPerCell; i++ )
+        _cellDof.assign( _nDofsPerCell, 0 );
+        for ( int i = 0; i < _nDofsPerCell; i++ )
         {
             std::string name = getStringInputFrom( fp, "Failed to read cell DOF assignment from input file!", _name );
             _cellDof[ i ] = analysisModel().dofManager().giveIndexForCellDof( name );
@@ -186,31 +222,6 @@ void Numerics::removeConstraintsOn( Cell* targetCell )
        process. In this case, an overriding method must be implemented in
        the derived class.
     */
-}
-// ----------------------------------------------------------------------------
-int Numerics::requiredNumberOfDofPerCell() 
-{
-    return _dofPerCell;
-}
-// ----------------------------------------------------------------------------
-int Numerics::requiredNumberOfMaterials() 
-{ 
-    return _nMaterials; 
-}
-// ----------------------------------------------------------------------------
-int Numerics::requiredNumberOfDofPerNode() 
-{ 
-    return _dofPerNode; 
-}
-// ----------------------------------------------------------------------------
-int Numerics::requiredNumberOfNodes() 
-{
-    return _nNodes; 
-}
-// ----------------------------------------------------------------------------
-int Numerics::requiredNumberOfStages() 
-{
-    return _nStages; 
 }
 
 /* -------------------------------------------------------------------------
@@ -267,7 +278,6 @@ std::tuple< std::vector<Dof*>
           , std::vector<Dof*>
           , RealVector >
 Numerics::giveStaticCoefficientMatrixAt( Cell*           targetCell
-                                       , int             stage
                                        , int             subsys
                                        , const TimeData& time )
 {
@@ -279,7 +289,6 @@ Numerics::giveStaticCoefficientMatrixAt( Cell*           targetCell
 // ----------------------------------------------------------------------------
 std::tuple< std::vector<Dof*>, RealVector >
 Numerics::giveStaticLeftHandSideAt( Cell*           targetCell
-                                  , int             stage
                                   , int             subsys
                                   , const TimeData& time )
 {
@@ -293,7 +302,6 @@ std::tuple< std::vector<Dof*>
           , std::vector<Dof*>
           , RealVector >
 Numerics::giveTransientCoefficientMatrixAt( Cell*           targetCell
-                                          , int             stage
                                           , int             subsys
                                           , const TimeData& time )
 {
@@ -305,7 +313,6 @@ Numerics::giveTransientCoefficientMatrixAt( Cell*           targetCell
 // ----------------------------------------------------------------------------
 std::tuple< std::vector<Dof*>, RealVector >
 Numerics::giveTransientLeftHandSideAt( Cell*           targetCell
-                                     , int             stage
                                      , int             subsys
                                      , const TimeData& time
                                      , ValueType       valType )
@@ -318,7 +325,6 @@ Numerics::giveTransientLeftHandSideAt( Cell*           targetCell
 // ----------------------------------------------------------------------------
 std::tuple< std::vector<Dof*>, RealVector >
 Numerics::giveStaticRightHandSideAt( Cell*                    targetCell
-                                   , int                      stage
                                    , int                      subsys
                                    , const BoundaryCondition& bndCond
                                    , const TimeData&          time )
@@ -332,7 +338,6 @@ Numerics::giveStaticRightHandSideAt( Cell*                    targetCell
 // ----------------------------------------------------------------------------
 std::tuple< std::vector<Dof*>, RealVector >
 Numerics::giveStaticRightHandSideAt( Cell*                 targetCell
-                                   , int                   stage
                                    , int                   subsys
                                    , const FieldCondition& fldCond
                                    , const TimeData&       time )
@@ -362,13 +367,13 @@ void Numerics::setDofStagesAt( Cell* targetCell )
 
 // Helper methods
 // ----------------------------------------------------------------------------
-std::vector<Material*> Numerics::giveMaterialSetFor( Cell* targetCell, int stage )
+std::vector<Material*> Numerics::giveMaterialSetFor( Cell* targetCell ) const
 {
     int label = targetCell->label();
-    return analysisModel().domainManager().giveMaterialSetForDomain( label, stage );
+    return analysisModel().domainManager().giveMaterialSetForDomain( label, _stage );
 }
 // ----------------------------------------------------------------------------
-void Numerics::error_unimplemented( std::string method )
+void Numerics::error_unimplemented( const std::string& method )
 {
     throw std::runtime_error( "\nError: Call to unimplemented method '"
             + _name + "::" + method + "' encountered!\n" );

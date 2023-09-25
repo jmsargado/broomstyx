@@ -79,8 +79,8 @@ namespace broomstyx
         void   makeNewNodeAt( RealVector& location );
         void   performNodalPostProcessing() const;
         void   readNumberOfFieldsPerNodeFrom( FILE* fp );
-        void   setCoordinatesOf( Node* targetNode, const RealVector& coor );
-        void   setFieldValueAt( Node* targetNode, int fieldNum, double val );
+        static void   setCoordinatesOf( Node* targetNode, const RealVector& coor );
+        static void   setFieldValueAt( Node* targetNode, int fieldNum, double val );
         
         // Methods involving cell access
 

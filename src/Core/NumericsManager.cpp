@@ -58,17 +58,17 @@ std::vector<Numerics*> NumericsManager::giveAllNumerics()
     return _numerics;
 }
 // ----------------------------------------------------------------------------
-Numerics* NumericsManager::giveNumerics( int label )
+Numerics* NumericsManager::giveNumerics( int id )
 {
     Numerics* target = nullptr;
     
     for ( Numerics* curNumerics : _numerics )
-        if ( curNumerics->_label == label )
+        if ( curNumerics->_id == id )
             target = curNumerics;
     
     if ( !target )
         throw std::runtime_error( "Error: There is no numerics corresponding to label '"
-            + std::to_string( label ) + "'!\nSource: NumericsManager" );
+            + std::to_string( id ) + "'!\nSource: NumericsManager" );
     
     return target;
 }
@@ -80,26 +80,26 @@ void NumericsManager::readNumericsFrom( FILE *fp )
     int nNumerics = getIntegerInputFrom( fp, "Failed to read number of numerics from input file!", src );
     _numerics.assign( nNumerics, nullptr );
     
-    // Track defined labels to make sure no numerics label is repeated
+    // Track defined IDs to make sure no numerics ID is repeated
     std::set<int> alreadyDefined;
     
     for ( int i = 0; i < nNumerics; i++ )
     {
         // Tag for numerics type
-        int label = getIntegerInputFrom( fp, "Failed to read domain name from input file!", src );
+        int id = getIntegerInputFrom( fp, "Failed to read numerics ID from input file!", src );
         
-        auto it = alreadyDefined.find( label );
+        auto it = alreadyDefined.find( id );
         if ( it != alreadyDefined.end() )
-            throw std::runtime_error( "Error: multiple numerics detected for label '"
-                + std::to_string( label ) + "'!\nSource: NumericsManager\n" );
+            throw std::runtime_error( "Error: multiple numerics detected for ID '"
+                + std::to_string( id ) + "'!\nSource: NumericsManager\n" );
         
         // Name of numerics type
         std::string typeName = getStringInputFrom( fp, "Failed to read numerics type from input file!", src );
         
         _numerics[ i ] = objectFactory().instantiateNumerics( typeName );
-        _numerics[ i ]->_label = label;
+        _numerics[ i ]->_id = id;
         
-        alreadyDefined.insert( label );
+        alreadyDefined.insert( id );
         _numerics[ i ]->readDataFrom( fp );
     }
 }

@@ -37,7 +37,9 @@ using namespace broomstyx;
 // Constructor
 DomainManager::DomainManager()
 {
-    _fieldsPerNode = -1;
+    _nStage = 0;
+    _fieldsPerNode = 0;
+    _fieldsPerCell = 0;
     _name = "DomainManager";
 }
 
@@ -46,7 +48,7 @@ DomainManager::~DomainManager()
 {
     for ( auto curNode : _nodeList )
     {
-        analysisModel().dofManager().destroyNodalDofsAt( curNode );
+        DofManager::destroyNodalDofsAt( curNode );
         delete curNode;
     }
 
@@ -54,7 +56,7 @@ DomainManager::~DomainManager()
     {
         for ( auto curCell : _cellList[ dim ] )
         {
-            analysisModel().dofManager().destroyCellDofsAt( curCell );
+            DofManager::destroyCellDofsAt( curCell );
             delete curCell;
         }
     }
@@ -115,7 +117,7 @@ std::vector<Material*> DomainManager::giveMaterialSetForDomain( int label, int s
 // ----------------------------------------------------------------------------
 int DomainManager::giveNumberOfPhysicalNames()
 {
-    return _physEnt.size();
+    return (int)_physEnt.size();
 }
 // ----------------------------------------------------------------------------
 Numerics* DomainManager::giveNumericsForDomain( int label, int stage ) const
@@ -201,8 +203,9 @@ void DomainManager::readDomainAssignmentsFrom( FILE* fp )
                 
         // Read numerics
         verifyKeyword( fp, "Numerics", _name );
-        int numericsLabel = getIntegerInputFrom( fp, "Failed reading numerics label from input file!", _name );
-        Numerics* numericsPtr = analysisModel().numericsManager().giveNumerics( numericsLabel );
+        int numericsId = getIntegerInputFrom( fp, "Failed reading numerics label from input file!", _name );
+        Numerics* numericsPtr = analysisModel().numericsManager().giveNumerics( numericsId );
+        numericsPtr->setStageTo( stage );
         
         // Create map entry
         std::pair< std::map<int, Numerics*>::iterator, bool> entry;
@@ -241,17 +244,17 @@ void DomainManager::countNodes()
 {
     // Determine number of active nodes
     int nActiveNodes = 0;
-    for ( auto curNode = _nodeList.begin(); curNode != _nodeList.end(); curNode++ )
-        if ( (*curNode)->_isActive )
-            (*curNode)->_id = nActiveNodes++;
+    for ( auto& curNode : _nodeList )
+        if ( curNode->_isActive )
+            curNode->_id = nActiveNodes++;
     
     // Rewrite active node addresses into one contiguous array
     _node.assign( nActiveNodes, nullptr );
     int curCount = 0;
-    for ( auto curNode = _nodeList.begin(); curNode != _nodeList.end(); curNode++ )
-        if ( (*curNode)->_isActive )
-            if ( (*curNode)->_isActive )
-                _node[ curCount++ ] = *curNode;
+    for ( auto& curNode : _nodeList )
+        if ( curNode->_isActive )
+            if ( curNode->_isActive )
+                _node[ curCount++ ] = curNode;
 }
 // ----------------------------------------------------------------------------
 std::set<Cell*>& DomainManager::giveCellsAttachedTo( Node* node, int dim )
@@ -289,7 +292,7 @@ Node* DomainManager::giveNode( int nodeNum ) const
 // ----------------------------------------------------------------------------
 int DomainManager::giveNumberOfNodes() const
 {
-    return _node.size();
+    return (int)_node.size();
 }
 // ----------------------------------------------------------------------------
 void DomainManager::makeNewNodeAt( RealVector& location )
@@ -433,7 +436,7 @@ void DomainManager::findCellsAttachedTo( Cell* targetCell )
 {
     std::vector<Node*> cellNode = targetCell->_node;
     int cellDim = targetCell->dimension();
-    int nCellNodes = cellNode.size();
+    int nCellNodes = (int)cellNode.size();
 
     for ( int curDim = 0; curDim < 4; curDim++ )
     {
@@ -445,9 +448,9 @@ void DomainManager::findCellsAttachedTo( Cell* targetCell )
             {
                 // All nodes of targetCell must also be nodes of candidate attached cell
                 bool candidateIsAttached = true;
-                for ( auto it = candidate.begin(); it != candidate.end(); ++it )
+                for ( auto it : candidate )
                 {
-                    std::vector<Node*> candNode = (*it)->_node;
+                    std::vector<Node*> candNode = it->_node;
                     for ( int j = 0; j < nCellNodes; j++ )
                     {
                         bool nodeIsShared = false;
@@ -460,8 +463,8 @@ void DomainManager::findCellsAttachedTo( Cell* targetCell )
                     }
                     if ( candidateIsAttached )
                     {
-                        targetCell->_attachedCell[ curDim ].insert( *it );
-                        (*it)->_attachedCell[ cellDim ].insert( targetCell );
+                        targetCell->_attachedCell[ curDim ].insert( it );
+                        it->_attachedCell[ cellDim ].insert( targetCell );
                     }
                 }
             }
@@ -725,7 +728,7 @@ void DomainManager::reportDetailedStatus()
         RealVector coor = _node[ i ]->_coordinates;
         std::printf( "    node %d: x = %e, y = %e, z = %e, dofs = ", i, coor( 0 ), coor( 1 ), coor( 2 ) );
         for ( int j = 0; j < (int)_node[ i ]->_dof.size(); j++ )
-            std::printf("%d ", analysisModel().dofManager().giveEquationNumberAt( _node[ i ]->_dof[ j ] ) );
+            std::printf("%d ", DofManager::giveEquationNumberAt( _node[ i ]->_dof[ j ] ) );
         std::printf( "\n" );
     }
 
@@ -744,7 +747,7 @@ void DomainManager::reportDetailedStatus()
             {
                 std::printf( ", dofs = " );
                 for ( int j = 0; j < nDofs; j++ )
-                    std::printf( "%d ", analysisModel().dofManager().giveEquationNumberAt( curCell->_dof[ j ] ) );
+                    std::printf( "%d ", DofManager::giveEquationNumberAt( curCell->_dof[ j ] ) );
             }
 
             int nNeighbors = (int)curCell->_neighbor.size();

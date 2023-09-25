@@ -62,19 +62,19 @@ namespace broomstyx
         std::string giveName();
         
         std::tuple<RealVector,RealVector> giveCellFieldOutputAtEvaluationPointsOf( Cell* targetCell, int fieldNum );
-        int  giveSpatialDimension();
+        int  giveSpatialDimension() const;
         void readDataFrom( FILE* fp );
-
-        int requiredNumberOfDofPerCell();
-        int requiredNumberOfMaterials();
-        int requiredNumberOfDofPerNode();
-        int requiredNumberOfNodes();
-        int requiredNumberOfStages();
+        int  requiredNumberOfDofsPerCell() const;
+        int  requiredNumberOfMaterials() const;
+        int  requiredNumberOfDofsPerNode() const;
+        int  requiredNumberOfNodes() const;
+        void setIdTo( int id );
+        void setStageTo( int stage );
 
         virtual void initializeMaterialsAt( Cell* targetCell );
-        virtual bool performAdditionalConvergenceCheckAt( Cell* targetCell, int stage );
-        virtual void performPreIterationOperationsAt( int stage, int iterNum );
-        virtual void printPostIterationMessage( int stage );
+        virtual bool performAdditionalConvergenceCheckAt( Cell* targetCell );
+        virtual void performPreIterationOperationsAt( int iterNum );
+        virtual void printPostIterationMessage();
         virtual void readAdditionalDataFrom( FILE* fp );
         virtual void removeConstraintsOn( Cell* targetCell );
 
@@ -86,26 +86,22 @@ namespace broomstyx
                           , std::vector<Dof*>
                           , RealVector >
             giveStaticCoefficientMatrixAt( Cell*           targetCell
-                                         , int             stage
                                          , int             subsys
                                          , const TimeData& time );
 
         virtual std::tuple< std::vector<Dof*>, RealVector >
             giveStaticLeftHandSideAt( Cell*           targetCell
-                                    , int             stage
                                     , int             subsys
                                     , const TimeData& time );
 
         virtual std::tuple< std::vector<Dof*>, RealVector >
             giveStaticRightHandSideAt( Cell*                    targetCell
-                                     , int                      stage
                                      , int                      subsys
                                      , const BoundaryCondition& bndCond
                                      , const TimeData&          time );
 
         virtual std::tuple< std::vector<Dof*>, RealVector >
             giveStaticRightHandSideAt( Cell*                 targetCell
-                                     , int                   stage
                                      , int                   subsys
                                      , const FieldCondition& fldCond
                                      , const TimeData&       time );
@@ -114,20 +110,17 @@ namespace broomstyx
                           , std::vector<Dof*>
                           , RealVector >
             giveTransientCoefficientMatrixAt( Cell*           targetCell
-                                            , int             stage
                                             , int             subsys
                                             , const TimeData& time );
 
         virtual std::tuple< std::vector<Dof*>, RealVector >
             giveTransientLeftHandSideAt( Cell*           targetCell
-                                       , int             stage
                                        , int             subsys
                                        , const TimeData& time
                                        , ValueType       valType );
         
         virtual void
             imposeConstraintAt( Cell*                    targetCell
-                              , int                      stage
                               , const BoundaryCondition& bndCond
                               , const TimeData&          time );
         
@@ -157,15 +150,17 @@ namespace broomstyx
         virtual void setDofStagesAt( Cell* targetCell );
         
     protected:
-        int _label;
-
         std::string _name;
+
+        int  _id;
+        int  _stage;
+        bool _stageAssigned;
+
         int _dim;
-        int _dofPerCell;
-        int _dofPerNode;
+        int _nDofsPerCell;
+        int _nDofsPerNode;
         int _nMaterials;
         int _nNodes;
-        int _nStages;
         int _nSubsystems;
 
         // Mapping from cell field number to field argument
@@ -174,12 +169,11 @@ namespace broomstyx
 
         std::vector<int> _nodalDof;
         std::vector<int> _cellDof;
-        std::vector<int> _stage;
         std::vector<int> _subsystem;
         
         // Helper methods
-        std::vector<Material*> giveMaterialSetFor( Cell* targetCell, int stage );
-        void error_unimplemented( std::string method );
+        std::vector<Material*> giveMaterialSetFor( Cell* targetCell ) const;
+        void error_unimplemented( const std::string& method );
     };
 }
 

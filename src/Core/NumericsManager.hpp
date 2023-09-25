@@ -38,7 +38,7 @@ namespace broomstyx
         NumericsManager& operator=( const NumericsManager& ) = delete;
         
         std::vector<Numerics*> giveAllNumerics();
-        Numerics* giveNumerics( int label );
+        Numerics* giveNumerics( int id );
         void      readNumericsFrom( FILE* fp );
         
     private:

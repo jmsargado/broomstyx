@@ -67,7 +67,7 @@ void SolutionMethod::imposeConstraintsAt( int stage
             if ( label == boundaryId )
             {
                 // Specifics of constraint imposition are handled by numerics
-                numerics->imposeConstraintAt( curCell, stage, bndCond[ ibc ],time );
+                numerics->imposeConstraintAt( curCell, bndCond[ ibc ], time );
             }
         }
 
@@ -118,7 +118,7 @@ bool broomstyx::SolutionMethod::checkConvergenceOfNumericsAt( int stage )
             int label = curCell->label();
             Numerics *numerics = analysisModel().domainManager().giveNumericsForDomain( label, stage );
 
-            bool cellConverged = numerics->performAdditionalConvergenceCheckAt( curCell, stage );
+            bool cellConverged = numerics->performAdditionalConvergenceCheckAt( curCell );
             if ( !cellConverged )
                 nUnconvergedCells += 1;
         }
