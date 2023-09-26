@@ -95,6 +95,9 @@ void AnalysisModel::initializeYourself( const std::string& filename )
     else
         _meshReader->readMeshFile( _meshFilename );
 
+    // Process domain assignments after mesh file has been read
+    _domainManager->processDomainAssignments();
+
     // Determine connectivity between cells
     _domainManager->findCellAttachments();
 //    _domainManager->findDomainCellNeighbors();

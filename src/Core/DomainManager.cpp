@@ -179,7 +179,7 @@ int DomainManager::givePhysicalEntityNumberFor( const std::string& name ) const
     return physEntNumber;
 }
 // ----------------------------------------------------------------------------
-void DomainManager::readDomainAssignmentsFrom( FILE* fp )
+void DomainManager::processDomainAssignments()
 {
     // Get number of stages from SolutionManager and initialize maps
     // for numerics and material sets
@@ -189,51 +189,70 @@ void DomainManager::readDomainAssignmentsFrom( FILE* fp )
     _numerics.resize( _nStage + 1 );
     _materialSet.resize( _nStage + 1 );
 
+    for ( auto& assignment : _domainAssign )
+    {
+        // Retrieve physical entity number
+        int physNum = this->givePhysicalEntityNumberFor( assignment.label );
+
+        // Set stage for numerics object
+        Numerics* numericsPtr = analysisModel().numericsManager().giveNumerics( assignment.numerics );
+        numericsPtr->setStageTo( assignment.stage );
+
+        // Create map entry for numerics
+        std::pair< std::map<int, Numerics*>::iterator, bool> entry;
+        entry = _numerics[ assignment.stage ].insert( std::pair<int, Numerics*>( physNum, numericsPtr ) );
+        if ( !entry.second )
+            throw std::runtime_error( "Multiple declaration of numerics for label '" + assignment.label
+                + "' for stage '" + std::to_string( assignment.stage )
+                + "' detected in input file!\nSource: " + _name );
+
+        // Form vector of pointers to Material objects
+        int nMat = (int)assignment.matSet.size();
+        std::vector<Material*> matPtrVec( nMat, nullptr );
+        for ( int i = 0; i < nMat; i++ )
+            matPtrVec[ i ] = analysisModel().materialManager().giveMaterial( assignment.matSet[ i ] );
+
+        // Create map entry for material set
+        std::pair<std::map<int, std::vector<Material*> >::iterator,bool> tmp;
+
+        tmp = _materialSet[ assignment.stage ].insert( std::pair<int, std::vector<Material*> >( physNum, matPtrVec ) );
+        if ( !tmp.second )
+            throw std::runtime_error( "Multiple declaration of material sets for label '" + assignment.label
+                + "' detected in input file!\nSource: " + _name );
+    }
+}
+// ----------------------------------------------------------------------------
+void DomainManager::readDomainAssignmentsFrom( FILE* fp )
+{
+    // Temporary processing of info from input file, as mesh file has not yet been read when this method is called.
+    // Thus physical entity numbers corresponding to the labels are not yet avaiable.
+
     int nAssign = getIntegerInputFrom( fp, "Failed to read number of domain assignments from input file!", _name );
-    
+    _domainAssign.assign( nAssign, DomainAssignment() );
     for ( int i = 0; i < nAssign; i++ )
     {
         // Read stage number
         verifyKeyword( fp, "Stage", _name );
-        int stage = getIntegerInputFrom( fp, "Failed reading stage number from input file!", _name );
+        _domainAssign[ i ].stage = getIntegerInputFrom( fp, "Failed reading stage number from input file!", _name );
 
         // Read domain label
-        std::string domainLabel = getStringInputFrom( fp, "Failed reading domain label from input file!", _name );
-        int physNum = this->givePhysicalEntityNumberFor( domainLabel );
-                
+        _domainAssign[ i ].label = getStringInputFrom( fp, "Failed reading domain label from input file!", _name );
+
         // Read numerics
         verifyKeyword( fp, "Numerics", _name );
         int numericsId = getIntegerInputFrom( fp, "Failed reading numerics label from input file!", _name );
+        _domainAssign[ i ].numerics = numericsId;
         Numerics* numericsPtr = analysisModel().numericsManager().giveNumerics( numericsId );
-        numericsPtr->setStageTo( stage );
-        
-        // Create map entry
-        std::pair< std::map<int, Numerics*>::iterator, bool> entry;
-        entry = _numerics[ stage ].insert( std::pair<int, Numerics*>( physNum, numericsPtr ) );
-        if ( !entry.second )
-            throw std::runtime_error( "Multiple declaration of numerics for label '" + domainLabel
-                + "' detected in input file!\nSource: " + _name );
-        
+
         // Read material set
         int nMat = numericsPtr->requiredNumberOfMaterials();
         if ( nMat > 0 )
         {
-            verifyKeyword( fp, "MaterialSet", _name );
-        
-            std::vector<Material*> matSet;
-            matSet.assign( nMat, nullptr );
+            std::vector<int> matSet( nMat, 0 );
             for ( int j = 0; j < nMat; j++ )
-            {
-                int matLabel = getIntegerInputFrom( fp, "Failed to read material label from input file.", _name );
-                matSet[ j ] = analysisModel().materialManager().giveMaterial( matLabel );
-            }
+                matSet[ j ] = getIntegerInputFrom( fp, "Failed to read material label from input file.", _name );
 
-            // Create map entry
-            std::pair<std::map<int, std::vector<Material*> >::iterator,bool> tmp;
-            tmp = _materialSet[ stage ].insert( std::pair<int, std::vector<Material*> >( physNum, matSet ) );
-            if ( !tmp.second )
-                throw std::runtime_error( "Multiple declaration of material sets for label '" + domainLabel
-                    + "' detected in input file!\nSource: " + _name );
+            _domainAssign[ i ].matSet = matSet;
         }
     }
 }

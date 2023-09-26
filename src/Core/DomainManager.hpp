@@ -55,7 +55,7 @@ namespace broomstyx
             int entityNumber;
             std::string name;
         };
-        
+
         void                   createPhysicalEntity( int dim, int number, const std::string& label );
         int                    giveDimensionOfPhysicalEntity( int physEntNum ) const;
         PhysicalEntity         givePhysicalEntity( int n ) const;
@@ -64,6 +64,7 @@ namespace broomstyx
         Numerics*              giveNumericsForDomain( int label, int stage ) const;
         std::string            giveNameOfPhysicalEntity( int physEntNum ) const;
         int                    givePhysicalEntityNumberFor( const std::string& name ) const;
+        void                   processDomainAssignments();
         void                   readDomainAssignmentsFrom( FILE* fp );
 
         // Methods involving node access
@@ -114,6 +115,15 @@ namespace broomstyx
         static void setPartitionOf( Cell* targetCell, int partition );
 
     private:
+        struct DomainAssignment
+        {
+            int         stage;
+            std::string label;
+            int         numerics;
+            std::vector<int> matSet;
+        };
+        std::vector<DomainAssignment> _domainAssign;
+
         std::string _name;
         int _nStage;
 
