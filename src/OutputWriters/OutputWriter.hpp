@@ -1,6 +1,4 @@
 /*
-  Copyright (c) 2014 - 2019 University of Bergen
-  
   This file is part of the BROOMStyx project.
 
   BROOMStyx is free software: you can redistribute it and/or modify
@@ -25,6 +23,7 @@
 #define	OUTPUTWRITER_HPP
 
 #include <cstdio>
+#include <string>
 
 namespace broomstyx
 {
@@ -44,6 +43,9 @@ namespace broomstyx
         virtual void initialize() = 0;
         virtual void readDataFrom( FILE* fp ) = 0;
         virtual void writeOutput( double time ) = 0;
+
+    protected:
+        std::string _name;
     };
 }
 

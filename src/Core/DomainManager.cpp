@@ -679,7 +679,12 @@ void DomainManager::initializeNumericsAtCells()
             {
                 Numerics* numerics = this->giveNumericsFor( _cell[ dim ][ i ], curStage );
                 if ( numerics )
+                {
+                    _cell[ dim ][ i ]->_hasNumericsAtStage[ curStage] = true;
                     numerics->initializeNumericsAt( _cell[ dim ][ i ] );
+                }
+                else
+                    _cell[ dim ][ i ]->_hasNumericsAtStage[ curStage] = false;
             }
         }
     }
