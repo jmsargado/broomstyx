@@ -681,6 +681,7 @@ void DomainManager::initializeNumericsAtCells()
                 if ( numerics )
                 {
                     _cell[ dim ][ i ]->_hasNumericsAtStage[ curStage] = true;
+                    _cell[ dim ][ i ]->_hasAssociatedNumerics = true;
                     numerics->initializeNumericsAt( _cell[ dim ][ i ] );
                 }
                 else
@@ -699,6 +700,7 @@ Cell* DomainManager::makeNewCell( int id,  int elType, int label )
     // Instantiate new cells
     Cell* newCell = new Cell( id, elType, label );
     int dim = this->giveDimensionOfPhysicalEntity( label );
+    newCell->_hasNumericsAtStage.assign( _nStage + 1, false );
 
     // Add new cell object to relevant list
     _cellList[ dim ].push_back( newCell );

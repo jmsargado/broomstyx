@@ -33,6 +33,7 @@ Cell::Cell( int id, int elType, int label )
     , _label( label )
     , _id( id )
     , _partition( 0 )
+    , _hasAssociatedNumerics( false )
 {}
 
 Cell::~Cell() = default;
@@ -42,6 +43,11 @@ Cell::~Cell() = default;
 int Cell::dimension() const
 {
     return analysisModel().domainManager().giveDimensionOfPhysicalEntity( _label );
+}
+// ---------------------------------------------------------------------------------------
+bool Cell::hasNumerics() const
+{
+    return _hasAssociatedNumerics;
 }
 // ---------------------------------------------------------------------------------------
 int Cell::id() const

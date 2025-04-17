@@ -55,6 +55,7 @@ namespace broomstyx
         std::vector<NumericsStatus*> numericsStatus;
 
         int  dimension() const;
+        bool hasNumerics() const;
         int  id() const;
         int  label() const;
         void showInfo();
@@ -66,6 +67,7 @@ namespace broomstyx
         int _partition;
 
         std::vector<bool>  _hasNumericsAtStage;
+        bool               _hasAssociatedNumerics;
         std::vector<Node*> _node;
         std::vector<Dof*>  _dof;
         std::set<Cell*>    _attachedCell[4];
