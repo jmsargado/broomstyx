@@ -19,7 +19,7 @@
   for the list of copyright holders.
 */
 
-#include "PlaneStrain_Fe_Tri3.hpp"
+#include "PlaneStress_Fe_Tri3.hpp"
 #include <cmath>
 #include <string>
 #include <vector>
@@ -33,21 +33,21 @@
 
 using namespace broomstyx;
 
-registerBroomstyxObject( Numerics, PlaneStrain_Fe_Tri3 )
+registerBroomstyxObject( Numerics, PlaneStress_Fe_Tri3 )
 
 // Numerics status
-NumericsStatus_PlaneStrain_Fe_Tri3::NumericsStatus_PlaneStrain_Fe_Tri3()
-    : _strain( RealVector( 4 ) )
-    , _stress( RealVector( 4 ) )
+NumericsStatus_PlaneStress_Fe_Tri3::NumericsStatus_PlaneStress_Fe_Tri3()
+    : _strain( RealVector( 3 ) )
+    , _stress( RealVector( 3 ) )
     , _gradU( RealMatrix( 2,2 ) )
     , _Jdet( 0. )
     , _materialStatus{ nullptr, nullptr }
 {}
 
-NumericsStatus_PlaneStrain_Fe_Tri3::~NumericsStatus_PlaneStrain_Fe_Tri3() = default;
+NumericsStatus_PlaneStress_Fe_Tri3::~NumericsStatus_PlaneStress_Fe_Tri3() = default;
 
 // Constructor
-PlaneStrain_Fe_Tri3::PlaneStrain_Fe_Tri3()
+PlaneStress_Fe_Tri3::PlaneStress_Fe_Tri3()
 {    
     _dim = 2;
     _dofPerNode = 2;
@@ -73,14 +73,14 @@ PlaneStrain_Fe_Tri3::PlaneStrain_Fe_Tri3()
 }
 
 // Destructor
-PlaneStrain_Fe_Tri3::~PlaneStrain_Fe_Tri3() = default;
+PlaneStress_Fe_Tri3::~PlaneStress_Fe_Tri3() = default;
 
 // Private methods
 // ----------------------------------------------------------------------------
-void PlaneStrain_Fe_Tri3::deleteNumericsAt(Cell* targetCell)
+void PlaneStress_Fe_Tri3::deleteNumericsAt( Cell* targetCell )
 {
-    auto cns = this->getNumericsStatusAt(targetCell);
-    auto material = this->giveMaterialSetFor(targetCell);
+    auto cns = this->getNumericsStatusAt( targetCell );
+    auto material = this->giveMaterialSetFor( targetCell );
     
     material[ 0 ]->destroy( cns->_materialStatus[ 0 ] );
     material[ 1 ]->destroy( cns->_materialStatus[ 1 ] );
@@ -88,7 +88,7 @@ void PlaneStrain_Fe_Tri3::deleteNumericsAt(Cell* targetCell)
     delete cns;
 }
 // ----------------------------------------------------------------------------
-void PlaneStrain_Fe_Tri3::finalizeDataAt( Cell* targetCell, const TimeData& time )
+void PlaneStress_Fe_Tri3::finalizeDataAt( Cell* targetCell, const TimeData& time )
 {
     // Retrieve numerics status at cell
     auto cns = this->getNumericsStatusAt( targetCell );
@@ -118,7 +118,7 @@ void PlaneStrain_Fe_Tri3::finalizeDataAt( Cell* targetCell, const TimeData& time
     cns->_stress = material[ 1 ]->giveForceFrom( cns->_strain, cns->_materialStatus[ 1 ] );
 }
 // ----------------------------------------------------------------------------
-double PlaneStrain_Fe_Tri3::giveCellFieldValueAt( Cell* targetCell, int fieldNum )
+double PlaneStress_Fe_Tri3::giveCellFieldValueAt( Cell* targetCell, int fieldNum )
 {
     RealVector val;
     std::string fieldTag;
@@ -137,7 +137,7 @@ double PlaneStrain_Fe_Tri3::giveCellFieldValueAt( Cell* targetCell, int fieldNum
     return val( 0 );
 }
 // ----------------------------------------------------------------------------
-RealVector PlaneStrain_Fe_Tri3::giveCellNodeFieldValuesAt( Cell* targetCell, int fieldNum )
+RealVector PlaneStress_Fe_Tri3::giveCellNodeFieldValuesAt( Cell* targetCell, int fieldNum )
 {
     double val = this->giveCellFieldValueAt( targetCell, fieldNum );
     
@@ -149,7 +149,7 @@ RealVector PlaneStrain_Fe_Tri3::giveCellNodeFieldValuesAt( Cell* targetCell, int
     return cellNodeValues;
 }
 // ----------------------------------------------------------------------------
-std::vector< RealVector > PlaneStrain_Fe_Tri3::giveEvaluationPointsFor( Cell *targetCell )
+std::vector< RealVector > PlaneStress_Fe_Tri3::giveEvaluationPointsFor( Cell *targetCell )
 {
     std::vector< Node* > node = analysisModel().domainManager().giveNodesOf( targetCell );
     
@@ -168,7 +168,7 @@ std::vector< RealVector > PlaneStrain_Fe_Tri3::giveEvaluationPointsFor( Cell *ta
 }
 // ----------------------------------------------------------------------------
 std::tuple< RealVector, RealVector >
-PlaneStrain_Fe_Tri3::giveFieldOutputAt( Cell* targetCell, const std::string& fieldTag )
+PlaneStress_Fe_Tri3::giveFieldOutputAt( Cell* targetCell, const std::string& fieldTag )
 {
     RealVector fieldVal( 1 ), weight( 1 );
     
@@ -184,9 +184,9 @@ PlaneStrain_Fe_Tri3::giveFieldOutputAt( Cell* targetCell, const std::string& fie
     else if ( fieldTag == "s_yy" )
         fieldVal( 0 ) = cns->_stress( 1 );
     else if ( fieldTag == "s_zz" )
-        fieldVal( 0 ) = cns->_stress( 2 );
+        fieldVal( 0 ) = 0.;
     else if ( fieldTag == "s_xy" )
-        fieldVal( 0 ) = cns->_stress( 3 );
+        fieldVal( 0 ) = cns->_stress( 2 );
     else if ( fieldTag == "ux_x" )
         fieldVal( 0 ) = cns->_gradU( 0,0 );
     else if ( fieldTag == "uy_x" )
@@ -244,7 +244,7 @@ PlaneStrain_Fe_Tri3::giveFieldOutputAt( Cell* targetCell, const std::string& fie
     else if ( fieldTag == "ene" )
         fieldVal( 0 ) = 0.5 * ( cns->_stress( 0 ) * cns->_gradU( 0,0 ) +
                                 cns->_stress( 1 ) * cns->_gradU( 1,1 ) +
-                                cns->_stress( 3 ) * ( cns->_gradU( 1,0 ) + cns->_gradU( 0,1 ) ) );
+                                cns->_stress( 2 ) * ( cns->_gradU( 1,0 ) + cns->_gradU( 0,1 ) ) );
     else
         throw std::runtime_error( "Invalid tag '" + fieldTag + "' supplied in field output request made to numerics '" + _name + "'!" );
     
@@ -252,7 +252,7 @@ PlaneStrain_Fe_Tri3::giveFieldOutputAt( Cell* targetCell, const std::string& fie
 }
 // ----------------------------------------------------------------------------
 std::tuple< std::vector< Dof* >, std::vector< Dof* >, RealVector >
-PlaneStrain_Fe_Tri3::giveStaticCoefficientMatrixAt( Cell*           targetCell
+PlaneStress_Fe_Tri3::giveStaticCoefficientMatrixAt( Cell*           targetCell
                                                   , int             stage
                                                   , int             subsys
                                                   , const TimeData& time )
@@ -297,7 +297,7 @@ PlaneStrain_Fe_Tri3::giveStaticCoefficientMatrixAt( Cell*           targetCell
 }
 // ----------------------------------------------------------------------------
 std::tuple< std::vector< Dof* >, RealVector >
-PlaneStrain_Fe_Tri3::giveStaticLeftHandSideAt( Cell*           targetCell
+PlaneStress_Fe_Tri3::giveStaticLeftHandSideAt( Cell*           targetCell
                                              , int             stage
                                              , int             subsys
                                              , const TimeData& time )
@@ -331,7 +331,7 @@ PlaneStrain_Fe_Tri3::giveStaticLeftHandSideAt( Cell*           targetCell
 }
 // ----------------------------------------------------------------------------
 std::tuple< std::vector< Dof* >, RealVector >
-PlaneStrain_Fe_Tri3::giveStaticRightHandSideAt( Cell*                    targetCell
+PlaneStress_Fe_Tri3::giveStaticRightHandSideAt( Cell*                    targetCell
                                               , int                      stage
                                               , int                      subsys
                                               , const BoundaryCondition& bndCond
@@ -407,9 +407,8 @@ PlaneStrain_Fe_Tri3::giveStaticRightHandSideAt( Cell*                    targetC
     return std::make_tuple( std::move( rowDof ), std::move( rhs ) );
 }
 // ----------------------------------------------------------------------------
-std::tuple< std::vector<Dof*>
-          , RealVector >
-PlaneStrain_Fe_Tri3::giveStaticRightHandSideAt( Cell*                 targetCell
+std::tuple< std::vector<Dof*>, RealVector >
+PlaneStress_Fe_Tri3::giveStaticRightHandSideAt( Cell*                 targetCell
                                               , int                   stage
                                               , int                   subsys
                                               , const FieldCondition& fldCond
@@ -462,7 +461,7 @@ PlaneStrain_Fe_Tri3::giveStaticRightHandSideAt( Cell*                 targetCell
     return std::make_tuple( std::move( rowDof ), std::move( rhs ) );
 }
 // ----------------------------------------------------------------------------
-void PlaneStrain_Fe_Tri3::imposeConstraintAt( Cell*                    targetCell
+void PlaneStress_Fe_Tri3::imposeConstraintAt( Cell*                    targetCell
                                             , int                      stage
                                             , const BoundaryCondition& bndCond
                                             , const TimeData&          time )
@@ -484,7 +483,7 @@ void PlaneStrain_Fe_Tri3::imposeConstraintAt( Cell*                    targetCel
     }
 }
 // ----------------------------------------------------------------------------
-void PlaneStrain_Fe_Tri3::initializeMaterialsAt( Cell* targetCell )
+void PlaneStress_Fe_Tri3::initializeMaterialsAt( Cell* targetCell )
 {
     auto cns = this->getNumericsStatusAt( targetCell );
     std::vector<Material*> material = this->giveMaterialSetFor( targetCell );
@@ -493,9 +492,9 @@ void PlaneStrain_Fe_Tri3::initializeMaterialsAt( Cell* targetCell )
     cns->_materialStatus[ 1 ] = material[ 1 ]->createMaterialStatus();
 }
 // ----------------------------------------------------------------------------
-void PlaneStrain_Fe_Tri3::initializeNumericsAt( Cell* targetCell )
+void PlaneStress_Fe_Tri3::initializeNumericsAt( Cell* targetCell )
 {
-    targetCell->numericsStatus = new NumericsStatus_PlaneStrain_Fe_Tri3();
+    targetCell->numericsStatus = new NumericsStatus_PlaneStress_Fe_Tri3();
     auto cns = this->getNumericsStatusAt( targetCell );
     
     // Pre-calculate det(J) and inv(J);
@@ -509,7 +508,7 @@ void PlaneStrain_Fe_Tri3::initializeNumericsAt( Cell* targetCell )
     cns->_JmatInv = inv(Jmat);
 }
 // ----------------------------------------------------------------------------
-void PlaneStrain_Fe_Tri3::setDofStagesAt( Cell* targetCell )
+void PlaneStress_Fe_Tri3::setDofStagesAt( Cell* targetCell )
 {
     // Element uses only one stage i.e. stage[0], and both nodal degrees of 
     // freedom get assigned to this stage
@@ -529,36 +528,35 @@ void PlaneStrain_Fe_Tri3::setDofStagesAt( Cell* targetCell )
 
 // Private methods
 // ---------------------------------------------------------------------------
-NumericsStatus_PlaneStrain_Fe_Tri3*
-PlaneStrain_Fe_Tri3::getNumericsStatusAt( Cell* targetCell )
+NumericsStatus_PlaneStress_Fe_Tri3*
+PlaneStress_Fe_Tri3::getNumericsStatusAt( Cell* targetCell )
 {
-    auto cns = dynamic_cast<NumericsStatus_PlaneStrain_Fe_Tri3*>( targetCell->numericsStatus );
+    auto cns = dynamic_cast<NumericsStatus_PlaneStress_Fe_Tri3*>( targetCell->numericsStatus );
     if ( !cns )
         throw std::runtime_error( "Error: Unable to retrieve numerics status at cell!\nSource: " + _name );
     
     return cns;
 }
 // ----------------------------------------------------------------------------
-RealMatrix PlaneStrain_Fe_Tri3::giveBmatAt( Cell* targetCell )
+RealMatrix PlaneStress_Fe_Tri3::giveBmatAt( Cell* targetCell )
 {
     auto cns = this->getNumericsStatusAt( targetCell );
     RealMatrix dpsi = cns->_JmatInv*_basisFunctionDerivatives;
     
     RealMatrix bmat( { { dpsi( 0,0 ), 0.,          dpsi( 0,1 ), 0.,          dpsi( 0,2 ), 0. },
                        { 0.,          dpsi( 1,0 ), 0.,          dpsi( 1,1 ), 0.,          dpsi( 1,2 ) },
-                       { 0.,          0.,          0.,          0.,          0.,          0. },
                        { dpsi( 1,0 ), dpsi( 0,0 ), dpsi( 1,1 ), dpsi( 0,1 ), dpsi( 1,2 ), dpsi( 0,2 ) } } );
 
     return bmat;
 }
 // ----------------------------------------------------------------------------
-RealMatrix PlaneStrain_Fe_Tri3::giveGradBmatAt( Cell* targetCell )
+RealMatrix PlaneStress_Fe_Tri3::giveGradBmatAt( Cell* targetCell )
 {
     auto cns = this->getNumericsStatusAt( targetCell );
     return cns->_JmatInv * _basisFunctionDerivatives;
 }
 // ----------------------------------------------------------------------------
-RealMatrix PlaneStrain_Fe_Tri3::giveJacobianMatrixAt( Cell* targetCell )
+RealMatrix PlaneStress_Fe_Tri3::giveJacobianMatrixAt( Cell* targetCell )
 {
     std::vector<Node*> node = analysisModel().domainManager().giveNodesOf( targetCell );
 #ifndef NDEBUG
@@ -579,7 +577,7 @@ RealMatrix PlaneStrain_Fe_Tri3::giveJacobianMatrixAt( Cell* targetCell )
    return _basisFunctionDerivatives * coorMat;
 }
 // ----------------------------------------------------------------------------
-RealVector PlaneStrain_Fe_Tri3::giveLocalDisplacementsAt( std::vector<Dof*>& dof, ValueType valType )
+RealVector PlaneStress_Fe_Tri3::giveLocalDisplacementsAt( std::vector<Dof*>& dof, ValueType valType )
 {    
     RealVector u( 6 );
 #pragma GCC ivdep
@@ -588,7 +586,7 @@ RealVector PlaneStrain_Fe_Tri3::giveLocalDisplacementsAt( std::vector<Dof*>& dof
     return u;
 }
 // ----------------------------------------------------------------------------
-std::vector<Dof*> PlaneStrain_Fe_Tri3::giveNodalDofsAt( Cell* targetCell )
+std::vector<Dof*> PlaneStress_Fe_Tri3::giveNodalDofsAt( Cell* targetCell )
 {
     std::vector<Node*> node = analysisModel().domainManager().giveNodesOf( targetCell );
     std::vector<Dof*> dof( 6, nullptr );
