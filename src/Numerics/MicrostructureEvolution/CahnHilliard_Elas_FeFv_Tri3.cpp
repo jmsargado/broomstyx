@@ -23,7 +23,9 @@
 
 #include "CahnHilliard_Elas_FeFv_Tri3.hpp"
 #include "Core/AnalysisModel.hpp"
+#include "Materials/Material.hpp"
 #include "Util/linearAlgebra.hpp"
+#include "Util/readOperations.hpp"
 
 using namespace broomstyx;
 
@@ -63,6 +65,12 @@ CahnHilliard_Elas_FeFv_Tri3::CahnHilliard_Elas_FeFv_Tri3()
     _gpNatCoor = { 1./3., 1./3. };
     _wt = 0.5;
 
+    _M = 0.;
+    _kappa = 0.;
+    _A = 0.;
+    _eps_m = 0.;
+    _Nv = 0.;
+
     // Pre-calculate shape functions and derivatives at Gauss point
     _basisFunctionValues = _basisFunction.giveBasisFunctionsAt( _gpNatCoor );
     std::vector<RealVector> dpsiNat = _basisFunction.giveBasisFunctionDerivativesAt( _gpNatCoor );
@@ -72,6 +80,51 @@ CahnHilliard_Elas_FeFv_Tri3::CahnHilliard_Elas_FeFv_Tri3()
         _basisFunctionDerivatives( 0,i ) = dpsiNat[ 0 ]( i );
         _basisFunctionDerivatives( 1,i ) = dpsiNat[ 1 ]( i );
     }
+}
+
+// ----------------------------------------------------------------------------
+void CahnHilliard_Elas_FeFv_Tri3::initializeMaterialsAt( Cell* targetCell )
+{
+    auto cns = this->getNumericsStatusAt( targetCell );
+    std::vector<Material*> material = this->giveMaterialSetFor( targetCell );
+
+    cns->_materialStatus[ 0 ] = material[ 0 ]->createMaterialStatus();
+    cns->_materialStatus[ 1 ] = material[ 1 ]->createMaterialStatus();
+    cns->_materialStatus[ 2 ] = material[ 2 ]->createMaterialStatus();
+    cns->_materialStatus[ 3 ] = material[ 3 ]->createMaterialStatus();
+}
+// ----------------------------------------------------------------------------
+void CahnHilliard_Elas_FeFv_Tri3::initializeNumericsAt( Cell* targetCell )
+{
+    targetCell->numericsStatus = new CellNumericsStatus();
+    auto cns = this->getNumericsStatusAt( targetCell );
+
+    // Pre-calculate det(J) and inv(J);
+    RealMatrix Jmat = this->giveJacobianMatrixAt( targetCell );
+    double Jdet = Jmat( 0,0 ) * Jmat( 1,1 ) - Jmat( 1,0 ) * Jmat( 0,1 );
+    cns->_area = _wt * Jdet;
+
+    // Sanity check
+    if ( Jdet <= 0 )
+        throw std::runtime_error( "Calculation of negative area detected!\nSource: " + _name );
+
+    // Calculate shape function derivatives in the actual space
+    RealMatrix JmatInv = inv( Jmat );
+    cns->_dPsi = JmatInv * _basisFunctionDerivatives;
+}
+// ----------------------------------------------------------------------------
+void CahnHilliard_Elas_FeFv_Tri3::readAdditionalDataFrom( FILE* fp )
+{
+    verifyKeyword( fp, "Mobility", _name );
+    _M = getRealInputFrom( fp, "Failed to read mobility from input file!", _name );
+    verifyKeyword( fp, "GradientEnergyCoef", _name );
+    _kappa = getRealInputFrom( fp, "Failed to read gradient energy coefficient from input file!", _name );
+    verifyKeyword( fp, "EnergyBarrier", _name );
+    _A = getRealInputFrom( fp, "Failed to read energy barrier from input file!", _name );
+    verifyKeyword( fp, "LatticeMisfit", _name );
+    _eps_m = getRealInputFrom( fp, "Failed to read lattice misfit from input file!", _name );
+    verifyKeyword( fp, "AtomsPerUnitVolume", _name );
+    _Nv = getRealInputFrom( fp, "Failed to read number of atoms per unit volume from input file!", _name );
 }
 
 // Private methods

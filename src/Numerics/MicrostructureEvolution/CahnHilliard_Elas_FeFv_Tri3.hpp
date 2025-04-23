@@ -37,6 +37,10 @@ namespace broomstyx
         CahnHilliard_Elas_FeFv_Tri3();
         ~CahnHilliard_Elas_FeFv_Tri3() override = default;
 
+        void initializeMaterialsAt( Cell* targetCell ) override;
+        void initializeNumericsAt( Cell* targetCell ) override;
+        void readAdditionalDataFrom( FILE* fp ) override;
+
     private:
         Triangle_P1 _basisFunction;
         RealVector  _basisFunctionValues;
@@ -44,6 +48,12 @@ namespace broomstyx
 
         RealVector  _gpNatCoor;
         double      _wt;
+
+        double _M;
+        double _kappa;
+        double _A;
+        double _eps_m;
+        double _Nv;
 
         class CellNumericsStatus : public NumericsStatus
         {
