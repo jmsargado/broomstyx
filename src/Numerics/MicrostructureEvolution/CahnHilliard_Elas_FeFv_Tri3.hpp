@@ -37,9 +37,19 @@ namespace broomstyx
         CahnHilliard_Elas_FeFv_Tri3();
         ~CahnHilliard_Elas_FeFv_Tri3() override = default;
 
+        void   deleteNumericsAt( Cell* targetCell ) override;
+        double giveCellFieldValueAt( Cell* targetCell, int fieldNum ) override;
+
+        void imposeConstraintAt( Cell*                    targetCell
+                               , int                      stage
+                               , const BoundaryCondition& bndCond
+                               , const TimeData&          time ) override;
+        void imposeInitialConditionAt( Cell* targetCell, const InitialCondition& initCond ) override;
         void initializeMaterialsAt( Cell* targetCell ) override;
         void initializeNumericsAt( Cell* targetCell ) override;
         void readAdditionalDataFrom( FILE* fp ) override;
+        void removeConstraintsOn( Cell* targetCell ) override;
+        void setDofStagesAt( Cell* targetCell ) override;
 
     private:
         Triangle_P1 _basisFunction;
@@ -70,9 +80,11 @@ namespace broomstyx
             double     _Egy_elas;
             RealMatrix _dPsi;
 
-            bool   _hasPhsFldConstraint;
-            bool   _hasPhsFldGradientPrescribedOnFace[ 3 ];
-            double _valueOnFace[ 3 ];
+            bool   _hasConcentrationConstraint;
+            bool   _hasConcentrationGradientPrescribedOnFace[ 3 ];
+            bool   _hasPsiGradientPrescribedOnFace[ 3 ];
+            double _cValueOnFace[ 3 ];
+            double _psiValueOnFace[ 3 ];
             bool   _hasNotComputedTransmissibilities;
             double _transmissibility[ 3 ];
 
