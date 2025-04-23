@@ -26,7 +26,35 @@
 using namespace broomstyx;
 
 // Constructor for cell numerics status
-CahnHilliard_Elas_FeFv_Tri3::CellNumericsStatus::CellNumericsStatus() = default;
+CahnHilliard_Elas_FeFv_Tri3::CellNumericsStatus::CellNumericsStatus()
+    : _area( 0. )
+    , _phi( 0. )
+    , _phiOld( 0. )
+    , _strain( RealVector( 4 ) )
+    , _stress( RealVector( 4 ) )
+    , _Egy_chem( 0. )
+    , _Egy_elas( 0. )
+    , _dPsi( RealMatrix( 2,3 ) )
+    , _hasPhsFldConstraint( false )
+    , _hasPhsFldGradientPrescribedOnFace { false, false, false }
+    , _valueOnFace { 0., 0., 0. }
+    , _hasNotComputedTransmissibilities( true )
+    , _transmissibility{ 0., 0., 0. }
+    , _materialStatus { nullptr, nullptr, nullptr, nullptr }
+{}
 
 // Constructor
 CahnHilliard_Elas_FeFv_Tri3::CahnHilliard_Elas_FeFv_Tri3() = default;
+
+
+// Private methods
+// ----------------------------------------------------------------------------
+CahnHilliard_Elas_FeFv_Tri3::CellNumericsStatus*
+CahnHilliard_Elas_FeFv_Tri3::getNumericsStatusAt( Cell* targetCell )
+{
+    auto cns = dynamic_cast< CellNumericsStatus* >( targetCell->numericsStatus );
+    if ( !cns )
+        throw std::runtime_error( "Error: Unable to retrieve numerics status at cell!\nSource: " + _name );
+
+    return cns;
+}

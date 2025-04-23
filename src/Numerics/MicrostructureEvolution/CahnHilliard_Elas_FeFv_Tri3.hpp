@@ -37,8 +37,6 @@ namespace broomstyx
         CahnHilliard_Elas_FeFv_Tri3();
         ~CahnHilliard_Elas_FeFv_Tri3() override = default;
 
-
-
     private:
 
         class CellNumericsStatus : public NumericsStatus
@@ -48,8 +46,25 @@ namespace broomstyx
             ~CellNumericsStatus() override = default;
 
         private:
+            double     _area;
+            double     _phi;
+            double     _phiOld;
+            RealVector _strain;
+            RealVector _stress;
+            double     _Egy_chem;
+            double     _Egy_elas;
+            RealMatrix _dPsi;
 
+            bool   _hasPhsFldConstraint;
+            bool   _hasPhsFldGradientPrescribedOnFace[ 3 ];
+            double _valueOnFace[ 3 ];
+            bool   _hasNotComputedTransmissibilities;
+            double _transmissibility[ 3 ];
+
+            MaterialStatus* _materialStatus[ 4 ];
         };
+
+        CellNumericsStatus* getNumericsStatusAt( Cell* targetCell );
     };
 }
 
