@@ -38,6 +38,12 @@ namespace broomstyx
         ~CahnHilliard_Elas_FeFv_Tri3() override = default;
 
     private:
+        Triangle_P1 _basisFunction;
+        RealVector  _basisFunctionValues;
+        RealMatrix  _basisFunctionDerivatives;
+
+        RealVector  _gpNatCoor;
+        double      _wt;
 
         class CellNumericsStatus : public NumericsStatus
         {
@@ -45,7 +51,6 @@ namespace broomstyx
             CellNumericsStatus();
             ~CellNumericsStatus() override = default;
 
-        private:
             double     _area;
             double     _phi;
             double     _phiOld;
@@ -65,6 +70,17 @@ namespace broomstyx
         };
 
         CellNumericsStatus* getNumericsStatusAt( Cell* targetCell );
+        RealMatrix        giveBmatAt( Cell* targetCell );
+        static std::vector< std::vector<Node*> > giveFaceNodesOf( Cell* targetCell );
+        static double     giveDistanceToMidpointOf( std::vector<Node*>& face, RealVector& coor);
+        RealMatrix        giveJacobianMatrixAt( Cell* targetCell );
+        static double     giveLengthOf( std::vector<Node*>& face );
+        static RealVector giveLocalDisplacementsAt( std::vector<Dof*>& dof, ValueType valType );
+        std::vector<Dof*> giveNodalDofsAt( Cell* targetCell );
+        static RealVector giveOutwardUnitNormalOf( std::vector<Node*>& face );
+        double            giveTransmissibilityCoefficientAt( std::vector<Node*>& face
+                                                           , Cell*               targetCell
+                                                           , Cell*               neighborCell );
     };
 }
 
