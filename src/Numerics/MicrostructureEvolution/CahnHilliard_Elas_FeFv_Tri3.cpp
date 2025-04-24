@@ -23,11 +23,14 @@
 
 #include "CahnHilliard_Elas_FeFv_Tri3.hpp"
 #include "Core/AnalysisModel.hpp"
+#include "Core/ObjectFactory.hpp"
 #include "Materials/Material.hpp"
 #include "Util/linearAlgebra.hpp"
 #include "Util/readOperations.hpp"
 
 using namespace broomstyx;
+
+registerBroomstyxObject( Numerics, CahnHilliard_Elas_FeFv_Tri3 )
 
 // Constructor for cell numerics status
 CahnHilliard_Elas_FeFv_Tri3::CellNumericsStatus::CellNumericsStatus()
@@ -166,9 +169,6 @@ void CahnHilliard_Elas_FeFv_Tri3::finalizeDataAt( Cell* targetCell, const TimeDa
     {
         // Length of face
         double length = giveLengthOf( face[ i ] );
-
-        // Phase-field gradient calculation
-        double d_pf_n;
 
         if ( cns->_hasConcentrationGradientPrescribedOnFace[ i ] )
             c_normalGradient[ i ] = 0.;
