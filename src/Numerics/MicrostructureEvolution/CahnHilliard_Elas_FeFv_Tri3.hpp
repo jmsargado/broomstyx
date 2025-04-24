@@ -52,6 +52,13 @@ namespace broomstyx
                                 , int             subsys
                                 , const TimeData& time ) override;
 
+        std::tuple< std::vector< Dof* >, RealVector >
+        giveStaticRightHandSideAt( Cell*                    targetCell
+                                 , int                      stage
+                                 , int                      subsys
+                                 , const BoundaryCondition& bndCond
+                                 , const TimeData&          time ) override;
+
         std::tuple< std::vector< Dof* >, std::vector< Dof* >, RealVector >
         giveTransientCoefficientMatrixAt( Cell*           targetCell
                                         , int             stage
