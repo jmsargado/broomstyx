@@ -40,6 +40,19 @@ namespace broomstyx
         void   deleteNumericsAt( Cell* targetCell ) override;
         double giveCellFieldValueAt( Cell* targetCell, int fieldNum ) override;
 
+        std::tuple< std::vector<Dof*>, RealVector >
+        giveStaticLeftHandSideAt( Cell*           targetCell
+                                , int             stage
+                                , int             subsys
+                                , const TimeData& time ) override;
+
+        std::tuple< std::vector<Dof*>, RealVector >
+        giveTransientLeftHandSideAt( Cell*           targetCell
+                                   , int             stage
+                                   , int             subsys
+                                   , const TimeData& time
+                                   , ValueType       valType ) override;
+
         void imposeConstraintAt( Cell*                    targetCell
                                , int                      stage
                                , const BoundaryCondition& bndCond
@@ -65,6 +78,8 @@ namespace broomstyx
         double _eps_m;
         double _Nv;
 
+        RealVector _I;
+
         class CellNumericsStatus : public NumericsStatus
         {
         public:
@@ -72,13 +87,16 @@ namespace broomstyx
             ~CellNumericsStatus() override = default;
 
             double     _area;
-            double     _phi;
-            double     _phiOld;
+            double     _c;
+            double     _cOld;
+            double     _Psi;
+            double     _PsiOld;
             RealVector _strain;
             RealVector _stress;
             double     _Egy_chem;
             double     _Egy_elas;
-            RealMatrix _dPsi;
+            RealMatrix _ShapeFuncDeriv;
+            RealMatrix _Cmat;
 
             bool   _hasConcentrationConstraint;
             bool   _hasConcentrationGradientPrescribedOnFace[ 3 ];
@@ -99,7 +117,6 @@ namespace broomstyx
         static double     giveLengthOf( std::vector<Node*>& face );
         static RealVector giveLocalDisplacementsAt( std::vector<Dof*>& dof, ValueType valType );
         std::vector<Dof*> giveNodalDofsAt( Cell* targetCell );
-        static RealVector giveOutwardUnitNormalOf( std::vector<Node*>& face );
         double            giveTransmissibilityCoefficientAt( std::vector<Node*>& face
                                                            , Cell*               targetCell
                                                            , Cell*               neighborCell );

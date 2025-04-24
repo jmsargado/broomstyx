@@ -32,13 +32,16 @@ using namespace broomstyx;
 // Constructor for cell numerics status
 CahnHilliard_Elas_FeFv_Tri3::CellNumericsStatus::CellNumericsStatus()
     : _area( 0. )
-    , _phi( 0. )
-    , _phiOld( 0. )
+    , _c( 0. )
+    , _cOld( 0. )
+    , _Psi( 0. )
+    , _PsiOld( 0. )
     , _strain( RealVector( 4 ) )
     , _stress( RealVector( 4 ) )
     , _Egy_chem( 0. )
     , _Egy_elas( 0. )
-    , _dPsi( RealMatrix( 2,3 ) )
+    , _ShapeFuncDeriv( RealMatrix( 2,3 ) )
+    , _Cmat( RealMatrix( 3,3 ) )
     , _hasConcentrationConstraint( false )
     , _hasConcentrationGradientPrescribedOnFace { false, false, false }
     , _hasPsiGradientPrescribedOnFace{ false, false, false }
@@ -72,6 +75,8 @@ CahnHilliard_Elas_FeFv_Tri3::CahnHilliard_Elas_FeFv_Tri3()
     _A = 0.;
     _eps_m = 0.;
     _Nv = 0.;
+
+    _I = { 1., 1., 0. };
 
     // Pre-calculate shape functions and derivatives at Gauss point
     _basisFunctionValues = _basisFunction.giveBasisFunctionsAt( _gpNatCoor );
@@ -116,6 +121,206 @@ double CahnHilliard_Elas_FeFv_Tri3::giveCellFieldValueAt( Cell* targetCell, int 
     std::tie( val,wt ) = this->giveFieldOutputAt( targetCell, fieldTag );
 
     return val( 0 );
+}
+// ----------------------------------------------------------------------------
+std::tuple< std::vector<Dof*>, RealVector >
+CahnHilliard_Elas_FeFv_Tri3::giveStaticLeftHandSideAt( Cell*           targetCell
+                                                     , int             stage
+                                                     , int             subsys
+                                                     , const TimeData& time )
+{
+    std::vector<Dof*> rowDof;
+    RealVector lhs;
+
+    if ( stage == _stage[ 0 ] )
+    {
+        auto cns = this->getNumericsStatusAt( targetCell );
+        int vecLength = 13; // Default output lengths for unassigned subsystems
+
+        if ( subsys == _subsystem[ 0 ] )
+            vecLength = 6;
+        else if ( subsys == _subsystem[ 1 ] )
+            vecLength = 7;
+
+        rowDof.assign( vecLength, nullptr );
+        lhs.init( vecLength );
+
+        // Retrieve nodal DOFs local to element
+        std::vector<Dof*> dof = this->giveNodalDofsAt( targetCell );
+
+        // Retrieve current value of local displacements
+        RealVector uVec = giveLocalDisplacementsAt( dof, current_value );
+
+        // Retrieve concentration
+        Dof* dof_c = analysisModel().domainManager().giveCellDof( _cellDof[ 0 ], targetCell );
+        cns->_c = DofManager::giveValueOfPrimaryVariableAt( dof_c, current_value );
+
+        // Retrieve material set for element
+        std::vector<Material*> material = this->giveMaterialSetFor( targetCell );
+
+        // Container for constitutive state
+        RealVector conState;
+
+        // Update internal variables for concentration functions
+        conState = { cns->_c };
+        material[ 3 ]->updateStatusFrom( conState, cns->_materialStatus[ 3 ] );
+        material[ 4 ]->updateStatusFrom( conState, cns->_materialStatus[ 4 ] );
+
+        // Calculate interpolation for misfit strain
+        double beta = material[ 3 ]->givePotentialFrom( conState, cns->_materialStatus[ 3 ] );
+
+        // Calculate elastic strain
+        RealMatrix bmatU = this->giveBmatAt( targetCell );
+        cns->_strain = bmatU * uVec - beta * _eps_m * _I;
+
+        // Update internaal variables for elasticity tensors
+        material[ 0 ]->updateStatusFrom( cns->_strain, cns->_materialStatus[ 0 ] );
+        material[ 1 ]->updateStatusFrom( cns->_strain, cns->_materialStatus[ 1 ] );
+
+        // Calculate elasticity tensors
+        RealMatrix Cmat_m = material[ 0 ]->giveModulusFrom( cns->_strain, cns->_materialStatus[ 0 ] );
+        RealMatrix Cmat_p = material[ 1 ]->giveModulusFrom( cns->_strain, cns->_materialStatus[ 1 ] );
+
+        // Assemble elastiity tensor based on concentration value
+        double alpha = material[ 4 ]->givePotentialFrom( conState, cns->_materialStatus[ 4 ] );
+        cns->_Cmat = Cmat_m + alpha * ( Cmat_p - Cmat_m );
+
+        int offset = 0;
+        if ( subsys == _subsystem[ 0 ] || subsys == UNASSIGNED )
+        {
+            // Stress equilibrium residual
+            rowDof[ 0 ] = dof[ 0 ];
+            rowDof[ 1 ] = dof[ 1 ];
+            rowDof[ 2 ] = dof[ 2 ];
+            rowDof[ 3 ] = dof[ 3 ];
+            rowDof[ 4 ] = dof[ 4 ];
+            rowDof[ 5 ] = dof[ 5 ];
+            offset = 6;
+
+            // Calculate stress
+            cns->_stress = cns->_Cmat * cns->_strain;
+
+            // Calculate FmatU
+            RealVector fmatU;
+            fmatU = cns->_area * trp( bmatU ) * cns->_stress;
+
+            lhs( 0 ) = fmatU( 0 );
+            lhs( 1 ) = fmatU( 1 );
+            lhs( 2 ) = fmatU( 2 );
+            lhs( 3 ) = fmatU( 3 );
+            lhs( 4 ) = fmatU( 4 );
+            lhs( 5 ) = fmatU( 5 );
+        }
+
+        if ( subsys == _subsystem[ 1 ] || subsys == UNASSIGNED )
+        {
+            // Get faces of target cell
+            std::vector<std::vector<Node*> > face = giveFaceNodesOf( targetCell );
+
+            // Get cell neighbors
+            std::vector<Cell*> neighbor = analysisModel().domainManager().giveNeighborsOf( targetCell );
+
+            // Cycle through faces and compute transmissibilities if not done yet
+            if ( cns->_hasNotComputedTransmissibilities )
+            {
+                for ( int i = 0; i < 3; i++ )
+                    if ( !cns->_hasConcentrationGradientPrescribedOnFace[ i ] && !cns->_hasPsiGradientPrescribedOnFace[ i ] )
+                        cns->_transmissibility[ i ] = this->giveTransmissibilityCoefficientAt( face[ i ], targetCell, neighbor[ i ] );
+
+                cns->_hasNotComputedTransmissibilities = false;
+            }
+
+            // Retrieve DOF for Psi and its value
+            Dof* dof_Psi = analysisModel().domainManager().giveCellDof( _cellDof[ 1 ], targetCell );
+            cns->_Psi = DofManager::giveValueOfPrimaryVariableAt( dof_Psi, current_value );
+
+            // Compute components of r_Psi
+            RealVector Psi_normFlux( 3 );
+            for ( int i = 0; i < 3; i++ )
+            {
+                if ( !cns->_hasConcentrationGradientPrescribedOnFace[ i ] )
+                {
+                    // Phase-field at neighbor cell
+                    Dof* dof_Psi2 = analysisModel().domainManager().giveCellDof( _cellDof[ 0 ], neighbor[ i ] );
+                    double Psi2 = DofManager::giveValueOfPrimaryVariableAt( dof_Psi2, current_value );
+
+                    Psi_normFlux( i ) = cns->_transmissibility[ i ] * ( cns->_Psi - Psi2 );
+                }
+            }
+
+            // Compute components of r_c
+            // delta_Felas/delta_c
+            RealVector beta_prime = material[ 3 ]->giveForceFrom( conState, cns->_materialStatus[ 3 ] );
+            RealVector alpha_prime = material[ 4 ]->giveForceFrom( conState, cns->_materialStatus[ 4 ] );
+            double delta_Felas_delta_c = ( _Nv / 2. ) *
+                    ( alpha_prime( 0 ) * cns->_strain.dot( ( Cmat_p - Cmat_m ) * cns->_strain )
+                    - 2. * beta_prime( 0 ) * _eps_m * cns->_strain.dot( cns->_Cmat * _I ) );
+
+            // Concentration dependent terms
+            double conc_term = _A * ( 2. * std::pow( cns->_c, 3. ) - 3 * cns->_c + 1. );
+            double c_sourceTerm = cns->_area * ( conc_term + ( delta_Felas_delta_c - cns->_Psi ) / ( 2. * _Nv * _kappa ) );
+
+            RealVector c_normFlux( 3 );
+            for ( int i = 0; i < 3; i++ )
+            {
+                if ( !cns->_hasConcentrationGradientPrescribedOnFace[ i ] )
+                {
+                    // Phase-field at neighbor cell
+                    Dof* dof_c2 = analysisModel().domainManager().giveCellDof( _cellDof[ 0 ], neighbor[ i ] );
+                    double c2 = DofManager::giveValueOfPrimaryVariableAt( dof_c2, current_value );
+
+                    c_normFlux( i ) = cns->_transmissibility[ i ] * ( cns->_c - c2 );
+                }
+            }
+
+            // r_psi components
+            rowDof[ offset ] = dof_Psi;
+            rowDof[ offset + 1 ] = dof_Psi;
+            rowDof[ offset + 2 ] = dof_Psi;
+
+            lhs( offset ) = Psi_normFlux( 0 );
+            lhs( offset + 1 ) = Psi_normFlux( 1 );
+            lhs( offset + 2 ) = Psi_normFlux( 2 );
+
+            // r_c components
+            rowDof[ offset + 3] = dof_c;
+            rowDof[ offset + 4 ] = dof_c;
+            rowDof[ offset + 5 ] = dof_c;
+            rowDof[ offset + 6 ] = dof_c;
+
+            // Calculate FmatPhi
+            lhs( offset + 3 ) = c_normFlux( 0 );
+            lhs( offset + 4 ) = c_normFlux( 1 );
+            lhs( offset + 5 ) = c_normFlux( 2 );
+            lhs( offset + 6 ) = c_sourceTerm;
+        }
+    }
+
+    return std::make_tuple( std::move( rowDof ), std::move( lhs ) );
+}
+// ----------------------------------------------------------------------------
+std::tuple< std::vector<Dof*>, RealVector >
+CahnHilliard_Elas_FeFv_Tri3::giveTransientLeftHandSideAt( Cell*           targetCell
+                                                        , int             stage
+                                                        , int             subsys
+                                                        , const TimeData& time
+                                                        , ValueType       valType )
+{
+    std::vector<Dof*> rowDof;
+    RealVector lhs;
+
+    if ( stage == _stage[ 0 ] && ( subsys == _subsystem[ 1 ] || subsys == UNASSIGNED ) )
+    {
+        auto cns = this->getNumericsStatusAt( targetCell );
+
+        Dof* dof_c = analysisModel().domainManager().giveCellDof( _cellDof[ 0 ], targetCell );
+        double c = DofManager::giveValueOfPrimaryVariableAt( dof_c, valType );
+
+        rowDof.assign( 1, dof_c );
+        lhs = { cns->_area * _M * c };
+    }
+
+    return std::make_tuple( std::move( rowDof ), std::move( lhs ) );
 }
 // ----------------------------------------------------------------------------
 void CahnHilliard_Elas_FeFv_Tri3::imposeConstraintAt( Cell*                    targetCell
@@ -233,7 +438,7 @@ void CahnHilliard_Elas_FeFv_Tri3::initializeNumericsAt( Cell* targetCell )
 
     // Calculate shape function derivatives in the actual space
     RealMatrix JmatInv = inv( Jmat );
-    cns->_dPsi = JmatInv * _basisFunctionDerivatives;
+    cns->_ShapeFuncDeriv = JmatInv * _basisFunctionDerivatives;
 }
 // ----------------------------------------------------------------------------
 void CahnHilliard_Elas_FeFv_Tri3::readAdditionalDataFrom( FILE* fp )
@@ -311,7 +516,7 @@ RealMatrix CahnHilliard_Elas_FeFv_Tri3::giveBmatAt( Cell* targetCell )
     auto cns = this->getNumericsStatusAt( targetCell );
 
     // Fill entries for Bmat
-    RealMatrix& dpsi = cns->_dPsi;
+    RealMatrix& dpsi = cns->_ShapeFuncDeriv;
     RealMatrix bmat( { { dpsi( 0,0 ), 0.,          dpsi( 0,1 ), 0.,          dpsi( 0,2 ), 0. },
                        { 0.,          dpsi( 1,0 ), 0.,          dpsi( 1,1 ), 0.,          dpsi( 1,2 ) },
                        { dpsi( 1,0 ), dpsi( 0,0 ), dpsi( 1,1 ), dpsi( 0,1 ), dpsi( 1,2 ), dpsi( 0,2 ) } } );
@@ -397,19 +602,6 @@ std::vector<Dof*> CahnHilliard_Elas_FeFv_Tri3::giveNodalDofsAt( Cell* targetCell
     dof[ 5 ] = analysisModel().domainManager().giveNodalDof( _nodalDof[ 1 ], node[ 2 ] );
 
     return dof;
-}
-// ----------------------------------------------------------------------------
-RealVector CahnHilliard_Elas_FeFv_Tri3::giveOutwardUnitNormalOf( std::vector<Node*>& face )
-{
-    RealVector coor0, coor1, dx, normVec;
-    coor0 = analysisModel().domainManager().giveCoordinatesOf( face[ 0 ] );
-    coor1 = analysisModel().domainManager().giveCoordinatesOf( face[ 1 ] );
-    dx = coor1 - coor0;
-    double dist = std::sqrt(dx.dot( dx ) );
-
-    normVec = { dx( 1 ) / dist, -dx( 0 ) / dist };
-
-    return normVec;
 }
 // ----------------------------------------------------------------------------
 double CahnHilliard_Elas_FeFv_Tri3::giveTransmissibilityCoefficientAt( std::vector<Node*>& face
