@@ -33,20 +33,15 @@ using namespace broomstyx;
 CahnHilliard_Elas_FeFv_Tri3::CellNumericsStatus::CellNumericsStatus()
     : _area( 0. )
     , _c( 0. )
-    , _cOld( 0. )
     , _Psi( 0. )
-    , _PsiOld( 0. )
     , _strain( RealVector( 4 ) )
     , _stress( RealVector( 4 ) )
     , _Egy_chem( 0. )
     , _Egy_elas( 0. )
     , _ShapeFuncDeriv( RealMatrix( 2,3 ) )
     , _Cmat( RealMatrix( 3,3 ) )
-    , _hasConcentrationConstraint( false )
     , _hasConcentrationGradientPrescribedOnFace { false, false, false }
     , _hasPsiGradientPrescribedOnFace{ false, false, false }
-    , _cValueOnFace { 0., 0., 0. }
-    , _psiValueOnFace { 0., 0., 0. }
     , _hasNotComputedTransmissibilities( true )
     , _transmissibility{ 0., 0., 0. }
     , _materialStatus { nullptr, nullptr, nullptr, nullptr }
@@ -104,6 +99,114 @@ void CahnHilliard_Elas_FeFv_Tri3::deleteNumericsAt( Cell* targetCell )
     delete cns;
 }
 // ----------------------------------------------------------------------------
+void CahnHilliard_Elas_FeFv_Tri3::finalizeDataAt( Cell* targetCell, const TimeData& time )
+{
+    // Pointer to numerics status
+    auto cns = this->getNumericsStatusAt( targetCell );
+
+    // Get coordinate of cell center
+
+    // Finalize values at cells
+    Dof* dof_c = analysisModel().domainManager().giveCellDof( _cellDof[ 0 ], targetCell );
+    Dof* dof_Psi = analysisModel().domainManager().giveCellDof( _cellDof[ 1 ], targetCell );
+
+    cns->_c = DofManager::giveValueOfPrimaryVariableAt( dof_c, converged_value );
+    cns->_Psi = DofManager::giveValueOfPrimaryVariableAt( dof_Psi, converged_value );
+
+    // Retrieve nodal DOFs local to element
+    std::vector<Dof*> dof = this->giveNodalDofsAt( targetCell );
+
+    // Retrieve DOF values
+    RealVector uVec = giveLocalDisplacementsAt( dof, converged_value );
+
+    // Retrieve material set for element
+    std::vector<Material*> material = this->giveMaterialSetFor( targetCell );
+
+    // Container for constitutive state
+    RealVector conState;
+
+    // Update internal variables for concentration functions
+    conState = { cns->_c };
+    material[ 2 ]->updateStatusFrom( conState, cns->_materialStatus[ 2 ] );
+    material[ 3 ]->updateStatusFrom( conState, cns->_materialStatus[ 3 ] );
+
+    // Calculate interpolation for misfit strain
+    double beta = material[ 2 ]->givePotentialFrom( conState, cns->_materialStatus[ 2 ] );
+
+    // Calculate elastic strain
+    RealMatrix bmatU = this->giveBmatAt( targetCell );
+    cns->_strain = bmatU * uVec - beta * _eps_m * _I;
+
+    // Update internaal variables for elasticity tensors
+    material[ 0 ]->updateStatusFrom( cns->_strain, cns->_materialStatus[ 0 ] );
+    material[ 1 ]->updateStatusFrom( cns->_strain, cns->_materialStatus[ 1 ] );
+
+    // Calculate elasticity tensors
+    RealMatrix Cmat_m = material[ 0 ]->giveModulusFrom( cns->_strain, cns->_materialStatus[ 0 ] );
+    RealMatrix Cmat_p = material[ 1 ]->giveModulusFrom( cns->_strain, cns->_materialStatus[ 1 ] );
+
+    // Assemble elastiity tensor based on concentration value
+    double alpha = material[ 3 ]->givePotentialFrom( conState, cns->_materialStatus[ 3 ] );
+    cns->_Cmat = Cmat_m + alpha * ( Cmat_p - Cmat_m );
+
+    // Calculate stress
+    cns->_stress = cns->_Cmat * cns->_strain;
+
+    // A. Calculate concentration flux at faces
+    std::vector<Node*> node;
+    node = analysisModel().domainManager().giveNodesOf( targetCell );
+    std::vector<std::vector<Node*> > face = giveFaceNodesOf( targetCell );
+
+    // Get cell neighbors
+    std::vector<Cell*> neighbor = analysisModel().domainManager().giveNeighborsOf( targetCell );
+
+    // Cycle through faces
+    double c_normalGradient[ 3 ];
+    for ( int i = 0; i < 3; i++ )
+    {
+        // Length of face
+        double length = giveLengthOf( face[ i ] );
+
+        // Phase-field gradient calculation
+        double d_pf_n;
+
+        if ( cns->_hasConcentrationGradientPrescribedOnFace[ i ] )
+            c_normalGradient[ i ] = 0.;
+        else
+        {
+            // phase-field at neighbor cell
+            Dof* dof_c2 = analysisModel().domainManager().giveCellDof( _cellDof[ 0 ], neighbor[ i ] );
+            double c2 = DofManager::giveValueOfPrimaryVariableAt( dof_c2, converged_value );
+
+            c_normalGradient[ i ] = cns->_transmissibility[ i ] * ( c2 - cns->_c ) / length;
+        }
+    }
+
+    // B. RT0 reconstruction of flux at cell center
+    std::vector<Node*> vertexNode( 3, nullptr );
+    vertexNode[ 0 ] = node[ 2 ];
+    vertexNode[ 1 ] = node[ 0 ];
+    vertexNode[ 2 ] = node[ 1 ];
+
+    RealVector d_c( 3 );
+
+    // Get coordinate of cell center
+    std::vector<RealVector> epCoor = this->giveEvaluationPointsFor( targetCell );
+    RealVector cellCoor = epCoor[ 0 ];
+
+    for ( int i = 0; i < 3; i++ )
+    {
+        double length = giveLengthOf( face[ i ] );
+        RealVector vtxNodeCoor = analysisModel().domainManager().giveCoordinatesOf( vertexNode[ i ] );
+        d_c = d_c + c_normalGradient[ i ] * length / ( 2. * cns->_area ) * ( cellCoor - vtxNodeCoor );
+    }
+    RealVector grad_c( { d_c( 0 ), d_c( 1 ) } );
+
+    // Calculate chemical energy density
+    cns->_Egy_chem = _Nv * ( _A * cns->_c * cns->_c * ( 1. - cns->_c ) * ( 1. - cns->_c ) + _kappa * grad_c.dot( grad_c ) );
+    cns->_Egy_elas = _Nv * 0.5 * cns->_stress.dot( cns->_strain );
+}
+// ----------------------------------------------------------------------------
 double CahnHilliard_Elas_FeFv_Tri3::giveCellFieldValueAt( Cell* targetCell, int fieldNum )
 {
     RealVector val, wt;
@@ -121,6 +224,50 @@ double CahnHilliard_Elas_FeFv_Tri3::giveCellFieldValueAt( Cell* targetCell, int 
     std::tie( val,wt ) = this->giveFieldOutputAt( targetCell, fieldTag );
 
     return val( 0 );
+}
+// ----------------------------------------------------------------------------
+RealVector CahnHilliard_Elas_FeFv_Tri3::giveCellNodeFieldValuesAt( Cell* targetCell, int fieldNum )
+{
+    double val = this->giveCellFieldValueAt( targetCell, fieldNum );
+    RealVector cellNodeValues( { val, val, val } );
+
+    return cellNodeValues;
+}
+// ----------------------------------------------------------------------------
+std::tuple< RealVector, RealVector >
+CahnHilliard_Elas_FeFv_Tri3::giveFieldOutputAt( Cell* targetCell, const std::string& fieldTag )
+{
+    RealVector fieldVal( 1 ), weight( 1 );
+
+    auto cns = this->getNumericsStatusAt( targetCell );
+    weight( 0 ) = cns->_area;
+
+    if ( fieldTag == "unassigned" )
+        fieldVal( 0 ) = 0.;
+    else if ( fieldTag == "s_xx" )
+        fieldVal( 0 ) = cns->_stress( 0 );
+    else if ( fieldTag == "s_yy" )
+        fieldVal( 0 ) = cns->_stress( 1 );
+    else if ( fieldTag == "s_xy" )
+        fieldVal( 0 ) = cns->_stress( 2 );
+    else if ( fieldTag == "e_xx" )
+        fieldVal( 0 ) = cns->_strain( 0 );
+    else if ( fieldTag == "e_yy" )
+        fieldVal( 0 ) = cns->_strain( 1 );
+    else if ( fieldTag == "g_xy" )
+        fieldVal( 0 ) = cns->_strain( 2 );
+    else if ( fieldTag == "c" )
+        fieldVal( 0 ) = cns->_c;
+    else if ( fieldTag == "Psi" )
+        fieldVal( 0 ) = cns->_Psi;
+    else if ( fieldTag == "egy_chem" )
+        fieldVal( 0 ) = cns->_Egy_chem;
+    else if ( fieldTag == "egy_elas" )
+        fieldVal( 0 ) = cns->_Egy_elas;
+    else
+        throw std::runtime_error( "Invalid tag '" + fieldTag + "' supplied in field output request!\nSource: " + _name );
+
+    return std::make_tuple(std::move( fieldVal ), std::move( weight ) );
 }
 // ----------------------------------------------------------------------------
 std::tuple< std::vector< Dof* >, std::vector< Dof* >, RealVector >
@@ -592,20 +739,6 @@ void CahnHilliard_Elas_FeFv_Tri3::imposeConstraintAt( Cell*                    t
     }
 
     // Constraints pertaining to cell DOFS
-    if ( bndCond.conditionType() == "CellConstraint" )
-    {
-        auto cns = this->getNumericsStatusAt( targetCell );
-
-        int dofNum = analysisModel().dofManager().giveIndexForCellDof( bndCond.targetDof() );
-        Dof* targetDof = analysisModel().domainManager().giveCellDof( dofNum, targetCell );
-
-        std::vector<RealVector> ep = this->giveEvaluationPointsFor( targetCell );
-        double bcVal = bndCond.valueAt( ep[ 0 ], time );
-        DofManager::setConstraintValueAt( targetDof, bcVal );
-
-        cns->_hasConcentrationConstraint = true;
-    }
-
     if ( bndCond.conditionType() == "ConcentrationGradient" || bndCond.conditionType() == "PsiGradient" )
     {
         std::vector<Cell*> domCell = analysisModel().domainManager().giveDomainCellsAssociatedWith( targetCell );
@@ -703,7 +836,6 @@ void CahnHilliard_Elas_FeFv_Tri3::readAdditionalDataFrom( FILE* fp )
 void CahnHilliard_Elas_FeFv_Tri3::removeConstraintsOn( Cell* targetCell )
 {
     auto cns = this->getNumericsStatusAt(targetCell);
-    cns->_hasConcentrationConstraint = false;
     cns->_hasConcentrationGradientPrescribedOnFace[ 0 ] = false;
     cns->_hasConcentrationGradientPrescribedOnFace[ 1 ] = false;
     cns->_hasConcentrationGradientPrescribedOnFace[ 2 ] = false;

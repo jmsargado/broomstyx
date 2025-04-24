@@ -38,7 +38,12 @@ namespace broomstyx
         ~CahnHilliard_Elas_FeFv_Tri3() override = default;
 
         void   deleteNumericsAt( Cell* targetCell ) override;
+        void   finalizeDataAt( Cell* targetCell, const TimeData& time ) override;
         double giveCellFieldValueAt( Cell* targetCell, int fieldNum ) override;
+        RealVector giveCellNodeFieldValuesAt( Cell* targetCell, int fieldNum ) override;
+
+        std::tuple< RealVector, RealVector >
+        giveFieldOutputAt( Cell* targetCell, const std::string& fieldTag ) override;
 
         std::tuple< std::vector< Dof* >, std::vector< Dof* >, RealVector >
         giveStaticCoefficientMatrixAt( Cell*           targetCell
@@ -107,9 +112,7 @@ namespace broomstyx
 
             double     _area;
             double     _c;
-            double     _cOld;
             double     _Psi;
-            double     _PsiOld;
             RealVector _strain;
             RealVector _stress;
             double     _Egy_chem;
@@ -117,11 +120,8 @@ namespace broomstyx
             RealMatrix _ShapeFuncDeriv;
             RealMatrix _Cmat;
 
-            bool   _hasConcentrationConstraint;
             bool   _hasConcentrationGradientPrescribedOnFace[ 3 ];
             bool   _hasPsiGradientPrescribedOnFace[ 3 ];
-            double _cValueOnFace[ 3 ];
-            double _psiValueOnFace[ 3 ];
             bool   _hasNotComputedTransmissibilities;
             double _transmissibility[ 3 ];
 
