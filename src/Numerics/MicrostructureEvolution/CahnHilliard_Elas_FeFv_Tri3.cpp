@@ -700,8 +700,9 @@ CahnHilliard_Elas_FeFv_Tri3::giveTransientCoefficientMatrixAt( Cell*           t
         auto cns = this->getNumericsStatusAt( targetCell );
 
         Dof* dof_c = analysisModel().domainManager().giveCellDof( _cellDof[ 0 ], targetCell );
+        Dof* dof_Psi = analysisModel().domainManager().giveCellDof( _cellDof[ 1 ], targetCell );
 
-        rowDof.assign( 1, dof_c );
+        rowDof.assign( 1, dof_Psi );
         colDof.assign( 1, dof_c );
         coefVal = { cns->_area * _M };
     }
@@ -726,7 +727,9 @@ CahnHilliard_Elas_FeFv_Tri3::giveTransientLeftHandSideAt( Cell*           target
         Dof* dof_c = analysisModel().domainManager().giveCellDof( _cellDof[ 0 ], targetCell );
         double c = DofManager::giveValueOfPrimaryVariableAt( dof_c, valType );
 
-        rowDof.assign( 1, dof_c );
+        Dof* dof_Psi = analysisModel().domainManager().giveCellDof( _cellDof[ 1 ], targetCell );
+
+        rowDof.assign( 1, dof_Psi );
         lhs = { cns->_area * _M * c };
     }
 
