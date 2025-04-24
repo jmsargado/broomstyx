@@ -37,8 +37,8 @@ CahnHilliard_Elas_FeFv_Tri3::CellNumericsStatus::CellNumericsStatus()
     : _area( 0. )
     , _c( 0. )
     , _Psi( 0. )
-    , _strain( RealVector( 4 ) )
-    , _stress( RealVector( 4 ) )
+    , _strain( RealVector( 3 ) )
+    , _stress( RealVector( 3 ) )
     , _Egy_chem( 0. )
     , _Egy_elas( 0. )
     , _ShapeFuncDeriv( RealMatrix( 2,3 ) )
@@ -234,6 +234,24 @@ RealVector CahnHilliard_Elas_FeFv_Tri3::giveCellNodeFieldValuesAt( Cell* targetC
     return cellNodeValues;
 }
 // ----------------------------------------------------------------------------
+std::vector< RealVector > CahnHilliard_Elas_FeFv_Tri3::giveEvaluationPointsFor( Cell *targetCell )
+{
+    std::vector<Node*> node = analysisModel().domainManager().giveNodesOf( targetCell );
+
+    std::vector<RealVector> coor( 1, RealVector() );
+    coor[ 0 ].init( 3 );
+
+    for ( int i = 0; i < 3; i++ )
+    {
+        RealVector nodeCoor = analysisModel().domainManager().giveCoordinatesOf(node[i]);
+        coor[ 0 ]( 0 ) += nodeCoor( 0 ) / 3.0;
+        coor[ 0 ]( 1 ) += nodeCoor( 1 ) / 3.0;
+        coor[ 0 ]( 2 ) += nodeCoor( 2 ) / 3.0;
+    }
+
+    return coor;
+}
+// ----------------------------------------------------------------------------
 std::tuple< RealVector, RealVector >
 CahnHilliard_Elas_FeFv_Tri3::giveFieldOutputAt( Cell* targetCell, const std::string& fieldTag )
 {
@@ -383,7 +401,7 @@ CahnHilliard_Elas_FeFv_Tri3::giveStaticCoefficientMatrixAt( Cell*           targ
 
             rowDof[ startIdx ] = dof_c;
             colDof[ startIdx ] = dof_c;
-            coefVal( startIdx ) = cns->_area * ( _A * ( 6. * cns->_c * cns->_c - 3. ) + 0.5 / ( _Nv * _kappa ) * d_dc_delt_Fel );
+            coefVal( startIdx ) = cns->_area * ( _A * ( 6. * cns->_c * cns->_c - 6. * cns->_c + 1. ) + 0.5 / ( _Nv * _kappa ) * d_dc_delt_Fel );
 
             // Cycle through faces
             for ( int i = 0; i < 3; i++ )
@@ -511,7 +529,7 @@ CahnHilliard_Elas_FeFv_Tri3::giveStaticLeftHandSideAt( Cell*           targetCel
             if ( cns->_hasNotComputedTransmissibilities )
             {
                 for ( int i = 0; i < 3; i++ )
-                    if ( !cns->_hasConcentrationGradientPrescribedOnFace[ i ] && !cns->_hasPsiGradientPrescribedOnFace[ i ] )
+                    if ( !cns->_hasConcentrationGradientPrescribedOnFace[ i ] || !cns->_hasPsiGradientPrescribedOnFace[ i ] )
                         cns->_transmissibility[ i ] = this->giveTransmissibilityCoefficientAt( face[ i ], targetCell, neighbor[ i ] );
 
                 cns->_hasNotComputedTransmissibilities = false;
@@ -528,7 +546,7 @@ CahnHilliard_Elas_FeFv_Tri3::giveStaticLeftHandSideAt( Cell*           targetCel
                 if ( !cns->_hasConcentrationGradientPrescribedOnFace[ i ] )
                 {
                     // Phase-field at neighbor cell
-                    Dof* dof_Psi2 = analysisModel().domainManager().giveCellDof( _cellDof[ 0 ], neighbor[ i ] );
+                    Dof* dof_Psi2 = analysisModel().domainManager().giveCellDof( _cellDof[ 1 ], neighbor[ i ] );
                     double Psi2 = DofManager::giveValueOfPrimaryVariableAt( dof_Psi2, current_value );
 
                     Psi_normFlux( i ) = cns->_transmissibility[ i ] * ( cns->_Psi - Psi2 );
@@ -544,7 +562,7 @@ CahnHilliard_Elas_FeFv_Tri3::giveStaticLeftHandSideAt( Cell*           targetCel
                     - 2. * d_beta( 0 ) * _eps_m * cns->_strain.dot( cns->_Cmat * _I ) );
 
             // Concentration dependent terms
-            double conc_term = _A * ( 2. * std::pow( cns->_c, 3. ) - 3 * cns->_c + 1. );
+            double conc_term = _A * ( 2. * std::pow( cns->_c, 3. ) - 3. * std::pow( cns->_c, 2. ) + cns->_c );
             double c_sourceTerm = cns->_area * ( conc_term + ( delta_Felas_delta_c - cns->_Psi ) / ( 2. * _Nv * _kappa ) );
 
             RealVector c_normFlux( 3 );
@@ -570,7 +588,7 @@ CahnHilliard_Elas_FeFv_Tri3::giveStaticLeftHandSideAt( Cell*           targetCel
             lhs( offset + 2 ) = Psi_normFlux( 2 );
 
             // r_c components
-            rowDof[ offset + 3] = dof_c;
+            rowDof[ offset + 3 ] = dof_c;
             rowDof[ offset + 4 ] = dof_c;
             rowDof[ offset + 5 ] = dof_c;
             rowDof[ offset + 6 ] = dof_c;

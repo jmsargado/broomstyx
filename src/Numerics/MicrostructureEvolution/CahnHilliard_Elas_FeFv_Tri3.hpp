@@ -42,6 +42,8 @@ namespace broomstyx
         double giveCellFieldValueAt( Cell* targetCell, int fieldNum ) override;
         RealVector giveCellNodeFieldValuesAt( Cell* targetCell, int fieldNum ) override;
 
+        std::vector< RealVector > giveEvaluationPointsFor( Cell* targetCell ) override;
+
         std::tuple< RealVector, RealVector >
         giveFieldOutputAt( Cell* targetCell, const std::string& fieldTag ) override;
 
