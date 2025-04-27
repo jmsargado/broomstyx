@@ -275,9 +275,17 @@ CahnHilliard_Elas_FeFv_Tri3::giveFieldOutputAt( Cell* targetCell, const std::str
     else if ( fieldTag == "g_xy" )
         fieldVal( 0 ) = cns->_strain( 2 );
     else if ( fieldTag == "c" )
-        fieldVal( 0 ) = cns->_c;
+    {
+        Dof* dof_c = analysisModel().domainManager().giveCellDof( _cellDof[ 0 ], targetCell );
+        cns->_c = DofManager::giveValueOfPrimaryVariableAt( dof_c, converged_value );
+        fieldVal(0) = cns->_c;
+    }
     else if ( fieldTag == "Psi" )
-        fieldVal( 0 ) = cns->_Psi;
+    {
+        Dof* dof_Psi = analysisModel().domainManager().giveCellDof( _cellDof[ 1 ], targetCell );
+        cns->_Psi = DofManager::giveValueOfPrimaryVariableAt( dof_Psi, converged_value );
+        fieldVal(0) = cns->_Psi;
+    }
     else if ( fieldTag == "egy_chem" )
         fieldVal( 0 ) = cns->_Egy_chem;
     else if ( fieldTag == "egy_elas" )
