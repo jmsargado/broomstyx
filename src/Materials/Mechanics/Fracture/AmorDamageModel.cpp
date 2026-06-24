@@ -42,8 +42,7 @@ AmorDamageModel::AmorDamageModel()
     : _analysisMode( TwoDimensional )
     , _elasticityModel( nullptr )
     , _degradationFunction( nullptr )
-    , _kT( 0. )
-    , _kC( 0. )
+    , _stab( 0. )
 {
     _name = "AmorDamageModel";
 }
@@ -85,9 +84,9 @@ double AmorDamageModel::givePotentialFrom( const RealVector& conState, const Mat
     
     double potential;
     if ( volStrain( 0 ) > 0. )
-        potential = ( _kT + ( 1. - _kT ) * degFcn ) * ( volEnergy + devEnergy );
+        potential = ( _stab + ( 1. - _stab ) * degFcn ) * ( volEnergy + devEnergy );
     else
-        potential = ( _kC + ( 1. - _kC ) * degFcn ) * devEnergy + volEnergy;
+        potential = ( _stab + ( 1. - _stab ) * degFcn ) * devEnergy + volEnergy;
     
     return potential;
 }
@@ -110,7 +109,7 @@ double AmorDamageModel::givePotentialFrom( const RealVector& conState, const Mat
         if ( volStrain( 0 ) > 0. )
         {
             double degFcn = _degradationFunction->givePotentialFrom( phi, mst->_materialStatus[ 1 ] );
-            potential = ( _kT + ( 1. - _kT ) * degFcn ) * volEnergy;
+            potential = ( _stab + ( 1. - _stab ) * degFcn ) * volEnergy;
         }
         else
             potential = volEnergy;
@@ -119,10 +118,7 @@ double AmorDamageModel::givePotentialFrom( const RealVector& conState, const Mat
     {
         double degFcn = _degradationFunction->givePotentialFrom( phi, mst->_materialStatus[ 1 ] );
         double devEnergy = _elasticityModel->givePotentialFrom( strain, mst->_materialStatus[ 0 ], "Deviatoric" );
-        if ( volStrain( 0 ) > 0. )
-            potential = ( _kT + ( 1. - _kT ) * degFcn ) * devEnergy;
-        else
-            potential = ( _kC + ( 1. - _kC ) * degFcn ) * devEnergy;
+        potential = ( _stab + ( 1. - _stab ) * degFcn ) * devEnergy;
     }
 
     return potential;
@@ -147,9 +143,9 @@ RealVector AmorDamageModel::giveForceFrom( const RealVector& conState, const Mat
         double degFcn = _degradationFunction->givePotentialFrom( phi, mst->_materialStatus[ 1 ] );
         
         if ( volStrain( 0 ) > 0. )
-            conForce = ( _kT + ( 1. - _kT ) * degFcn ) * ( volStress + devStress );
+            conForce = ( _stab + ( 1. - _stab ) * degFcn ) * ( volStress + devStress );
         else
-            conForce = ( _kC + ( 1. - _kC ) * degFcn ) * devStress + volStress;
+            conForce = ( _stab + ( 1. - _stab ) * degFcn ) * devStress + volStress;
     }
     else if ( label == "Mechanics_Volumetric" )
     {
@@ -157,7 +153,7 @@ RealVector AmorDamageModel::giveForceFrom( const RealVector& conState, const Mat
         if ( volStrain( 0 ) > 0. )
         {
             double degFcn = _degradationFunction->givePotentialFrom( phi, mst->_materialStatus[ 1 ] );
-            conForce = ( _kT + ( 1. - _kT ) * degFcn ) * volStress;
+            conForce = ( _stab + ( 1. - _stab ) * degFcn ) * volStress;
         }
         else
             conForce = volStress;
@@ -167,33 +163,33 @@ RealVector AmorDamageModel::giveForceFrom( const RealVector& conState, const Mat
         RealVector devStress = _elasticityModel->giveForceFrom( strain, mst->_materialStatus[ 0 ], "Deviatoric" );
         double degFcn = _degradationFunction->givePotentialFrom( phi, mst->_materialStatus[ 1 ] );
         if ( volStrain( 0 ) > 0. )
-            conForce = ( _kT + ( 1. - _kT ) * degFcn ) * devStress;
+            conForce = ( _stab + ( 1. - _stab ) * degFcn ) * devStress;
         else
-            conForce = ( _kC + ( 1. - _kC ) * degFcn ) * devStress;
+            conForce = ( _stab + ( 1. - _stab ) * degFcn ) * devStress;
     }
     else if ( label == "PhaseField" )
     {
         RealVector DdegFcn = _degradationFunction->giveForceFrom( phi, mst->_materialStatus[ 1 ] );
         if ( volStrain( 0 ) > 0. )
-            conForce = { ( 1. - _kT ) * DdegFcn( 0 ), mst->_volElasticEnergy + mst->_devElasticEnergy };
+            conForce = { ( 1. - _stab ) * DdegFcn( 0 ), mst->_volElasticEnergy + mst->_devElasticEnergy };
         else
-            conForce = { ( 1. - _kC ) * DdegFcn( 0 ), mst->_devElasticEnergy };
+            conForce = { ( 1. - _stab ) * DdegFcn( 0 ), mst->_devElasticEnergy };
     }
     else if ( label == "PhaseField_Volumetric" )
     {
         RealVector DdegFcn = _degradationFunction->giveForceFrom( phi, mst->_materialStatus[ 1 ] );
         if ( volStrain( 0 ) > 0. )
-            conForce = { ( 1. - _kT ) * DdegFcn( 0 ), mst->_volElasticEnergy };
+            conForce = { ( 1. - _stab ) * DdegFcn( 0 ), mst->_volElasticEnergy };
         else
-            conForce = { ( 1. - _kC ) * DdegFcn( 0 ), 0. };
+            conForce = { ( 1. - _stab ) * DdegFcn( 0 ), 0. };
     }
     else if ( label == "PhaseField_Deviatoric" )
     {
         RealVector DdegFcn = _degradationFunction->giveForceFrom( phi, mst->_materialStatus[ 1 ] );
         if ( volStrain( 0 ) > 0. )
-            conForce = { ( 1. - _kT ) * DdegFcn( 0 ), mst->_devElasticEnergy };
+            conForce = { ( 1. - _stab ) * DdegFcn( 0 ), mst->_devElasticEnergy };
         else
-            conForce = { ( 1. - _kC ) * DdegFcn( 0 ), mst->_devElasticEnergy };
+            conForce = { ( 1. - _stab ) * DdegFcn( 0 ), mst->_devElasticEnergy };
     }
     else
         throw std::runtime_error( "Error: Invalid subsytem label '" + label +
@@ -222,9 +218,9 @@ RealMatrix AmorDamageModel::giveModulusFrom( const RealVector& conState, const M
         double degFcn = _degradationFunction->givePotentialFrom( phi, mst->_materialStatus[ 1 ] );
         
         if ( volStrain( 0 ) > 0. )
-            conMod = ( _kT + ( 1. - _kT ) * degFcn ) * ( volModulus + devModulus );
+            conMod = ( _stab + ( 1. - _stab ) * degFcn ) * ( volModulus + devModulus );
         else
-            conMod = ( _kC + ( 1. - _kC ) * degFcn ) * devModulus + volModulus;
+            conMod = ( _stab + ( 1. - _stab ) * degFcn ) * devModulus + volModulus;
     }
     else if ( label == "Mechanics_Volumetric" )
     {
@@ -233,7 +229,7 @@ RealMatrix AmorDamageModel::giveModulusFrom( const RealVector& conState, const M
         if ( volStrain( 0 ) > 0. )
         {
             double degFcn = _degradationFunction->givePotentialFrom( phi, mst->_materialStatus[ 1 ] );
-            conMod = ( _kT + ( 1. - _kT ) * degFcn ) * volModulus;
+            conMod = ( _stab + ( 1. - _stab ) * degFcn ) * volModulus;
         }
         else
             conMod = volModulus;
@@ -243,38 +239,38 @@ RealMatrix AmorDamageModel::giveModulusFrom( const RealVector& conState, const M
         RealMatrix devModulus = _elasticityModel->giveModulusFrom( strain, mst->_materialStatus[ 0 ], "Deviatoric" );
         double degFcn = _degradationFunction->givePotentialFrom( phi, mst->_materialStatus[ 1 ] );
         if ( volStrain( 0 ) > 0. )
-            conMod = ( _kT + ( 1. - _kT ) * degFcn ) * devModulus;
+            conMod = ( _stab + ( 1. - _stab ) * degFcn ) * devModulus;
         else
-            conMod = ( _kC + ( 1. - _kC ) * degFcn ) * devModulus;
+            conMod = ( _stab + ( 1. - _stab ) * degFcn ) * devModulus;
     }
     else if ( label == "PhaseField" )
     {
         RealMatrix DDdegFcn = _degradationFunction->giveModulusFrom( phi, mst->_materialStatus[ 1 ] );
         if ( volStrain( 0 ) > 0. )
-            conMod = { { ( 1. - _kT ) * DDdegFcn( 0,0 ), 0. },
+            conMod = { { ( 1. - _stab ) * DDdegFcn( 0,0 ), 0. },
                        { 0., mst->_volElasticEnergy + mst->_devElasticEnergy } };
         else
-            conMod = { { ( 1. - _kC ) * DDdegFcn( 0,0 ), 0. },
+            conMod = { { ( 1. - _stab ) * DDdegFcn( 0,0 ), 0. },
                        { 0., mst->_devElasticEnergy } };
     }
     else if ( label == "PhaseField_Volumetric" )
     {
         RealMatrix DDdegFcn = _degradationFunction->giveModulusFrom( phi, mst->_materialStatus[ 1 ] );
         if ( volStrain( 0 ) > 0. )
-            conMod = { { ( 1. - _kT ) * DDdegFcn( 0,0 ), 0. },
+            conMod = { { ( 1. - _stab ) * DDdegFcn( 0,0 ), 0. },
                        { 0., mst->_volElasticEnergy } };
         else
-            conMod = { { ( 1. - _kC ) * DDdegFcn( 0,0 ), 0. },
+            conMod = { { ( 1. - _stab ) * DDdegFcn( 0,0 ), 0. },
                        { 0., 0. } };
     }
     else if ( label == "PhaseField_Deviatoric" )
     {
         RealMatrix DDdegFcn = _degradationFunction->giveModulusFrom( phi, mst->_materialStatus[ 1 ] );
         if ( volStrain( 0 ) > 0. )
-            conMod = { { ( 1. - _kT ) * DDdegFcn( 0,0 ), 0. },
+            conMod = { { ( 1. - _stab ) * DDdegFcn( 0,0 ), 0. },
                        { 0., mst->_devElasticEnergy } };
         else
-            conMod = { { ( 1. - _kC ) * DDdegFcn( 0,0 ), 0. },
+            conMod = { { ( 1. - _stab ) * DDdegFcn( 0,0 ), 0. },
                        { 0., mst->_devElasticEnergy } };
     }
     else
@@ -309,29 +305,19 @@ void AmorDamageModel::readParamatersFrom( FILE* fp )
     _degradationFunction->readParamatersFrom( fp );
 
     verifyKeyword( fp, "Stabilization", _name );
-    _kT = getRealInputFrom( fp, "Failed to read tension stabilization constant from input file!", _name );
-    _kC = getRealInputFrom( fp, "Failed to read compression stabilization constant from input file!", _name );
+    _stab = getRealInputFrom( fp, "Failed to read stabilization constant from input file!", _name );
 
     // Declare values of _Pvol and _I
     if ( _analysisMode == TwoDimensional || _analysisMode == PlaneStress )
     {
-        _I = { { 1., 0., 0. },
-               { 0., 1., 0. },
-               { 0., 0., 1. } };
-
-        double f = 0.5;
+        const double f = 0.5;
         _Pvol = { { f,  f,  0. },
                   { f,  f,  0. },
                   { 0., 0., 0. } };
     }
     else if ( _analysisMode == PlaneStrain || _analysisMode == Axisymmetric )
     {
-        _I = { { 1., 0., 0., 0. },
-               { 0., 1., 0., 0. },
-               { 0., 0., 1., 0. },
-               { 0., 0., 0., 1. } };
-
-        double f = 1. / 3.;
+        const double f = 1. / 3.;
         _Pvol = { { f,  f,  f,  0. },
                   { f,  f,  f,  0. },
                   { f,  f,  f,  0. },
@@ -339,14 +325,7 @@ void AmorDamageModel::readParamatersFrom( FILE* fp )
     }
     else
     {
-        _I = { { 1., 0., 0., 0., 0., 0. },
-               { 0., 1., 0., 0., 0., 0. },
-               { 0., 0., 1., 0., 0., 0. },
-               { 0., 0., 0., 1., 0., 0. },
-               { 0., 0., 0., 0., 1., 0. },
-               { 0., 0., 0., 0., 0., 1. } };
-
-        double f = 1. / 3.;
+        const double f = 1. / 3.;
         _Pvol = { { f,  f,  f,  0., 0., 0. },
                   { f,  f,  f,  0., 0., 0. },
                   { f,  f,  f,  0., 0., 0. },

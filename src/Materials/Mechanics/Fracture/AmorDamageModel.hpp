@@ -72,9 +72,7 @@ namespace broomstyx
         AnalysisMode _analysisMode;
         Material*    _elasticityModel;
         Material*    _degradationFunction;
-        double       _kT;
-        double       _kC;
-        RealMatrix   _I;
+        double       _stab;
         RealMatrix   _Pvol;
 
         MaterialStatus_AmorDamageModel* 
