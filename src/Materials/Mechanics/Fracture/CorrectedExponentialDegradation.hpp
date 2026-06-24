@@ -99,6 +99,7 @@ namespace broomstyx
         double _a2;
         double _a3;
         double _w;
+        double _stab;
         bool   _useSecantModulus;
     };
 }

@@ -33,8 +33,15 @@ registerBroomstyxObject(Material, CorrectedExponentialDegradation)
 // Constructor
 CorrectedExponentialDegradation::CorrectedExponentialDegradation()
 {
-    _name = "CorrectedExponentialDegradation";
+    _n = 0.;
+    _k = 0.;
+    _a2 = 0.;
+    _a3 = 0.;
+    _w = 0.;
+    _stab = 0.;
     _useSecantModulus = true;
+
+    _name = "CorrectedExponentialDegradation";
 }
 
 // Public methods
@@ -50,7 +57,7 @@ double CorrectedExponentialDegradation::givePotentialFrom( const RealVector& con
     
     double val;
     if ( phi < 1. )
-            val = ( 1. - _w ) * ( 1. - f2 ) / f0 + _w * ( _a2 * f1 * f1 + _a3 * f1 * f1 * f1 );
+            val = ( 1. - _stab ) * ( ( 1. - _w ) * ( 1. - f2 ) / f0 + _w * ( _a2 * f1 * f1 + _a3 * f1 * f1 * f1 ) ) + _stab;
     else
         val = 0.;
     
@@ -68,9 +75,9 @@ RealVector CorrectedExponentialDegradation::giveForceFrom( const RealVector& con
     
     RealVector force( 1 );
     if ( phi <= 1. )
-        force( 0 ) = - ( 1. - _w ) * _n * _k / f0 * std::pow( f1, _n - 1. ) * f2 - _w * ( 2. * _a2 * f1 + 3. * _a3 * f1 * f1 );
+        force( 0 ) = -( 1. - _stab ) * ( ( 1. - _w ) * _n * _k / f0 * std::pow( f1, _n - 1. ) * f2 - _w * ( 2. * _a2 * f1 + 3. * _a3 * f1 * f1 ) );
     else
-        force( 0 ) = ( 1. - _w ) * _n * _k / f0 * std::pow( f1, _n - 1. ) * f2 + _w * ( 2. * _a2 * f1 + 3. * _a3 * f1 * f1 );
+        force( 0 ) = ( 1. - _stab ) * ( ( 1. - _w ) * _n * _k / f0 * std::pow( f1, _n - 1. ) * f2 + _w * ( 2. * _a2 * f1 + 3. * _a3 * f1 * f1 ) );
     
     return force;
 }
@@ -89,14 +96,14 @@ RealMatrix CorrectedExponentialDegradation::giveModulusFrom( const RealVector& c
     if ( _useSecantModulus )
     {
         // Use constructed 2nd derivative to avoid blow-up
-        modulus( 0,0 ) = ( 1. - _w ) * _n * _k / f0 * std::pow( f1, _n - 2. ) * f2 + _w * ( 2. * _a2 + 3. * _a3 * f1 );
+        modulus( 0,0 ) = ( 1. - _stab ) * ( ( 1. - _w ) * _n * _k / f0 * std::pow( f1, _n - 2. ) * f2 + _w * ( 2. * _a2 + 3. * _a3 * f1 ) );
     }
     else
     {
         // True 2nd derivative
-        modulus( 0,0 ) = _k * ( _n - 1. ) * _n * ( 1. - _w ) * std::pow( f1, _n - 2. ) * f2 / f0
+        modulus( 0,0 ) = ( 1. - _stab ) * ( _k * ( _n - 1. ) * _n * ( 1. - _w ) * std::pow( f1, _n - 2. ) * f2 / f0
                        - _k * _k * _n * _n * ( 1. - _w ) * std::pow( f1, 2. * _n - 2. ) * f2 / f0
-                       + _w * ( 2. * _a2 + 6. * _a3 * f1 );
+                       + _w * ( 2. * _a2 + 6. * _a3 * f1 ) );
     }
 
     return modulus;
@@ -109,11 +116,12 @@ void CorrectedExponentialDegradation::readParamatersFrom( FILE* fp )
     std::string choice = getStringInputFrom( fp, "Failed to read choice of modulus from input file!", _name );
     if ( choice == "UseTangentModulus" )
         _useSecantModulus = false;
-    else if ( choice == "UseSecantModulus" )
-        _useSecantModulus = true;
-    else
+    else if ( choice != "UseSecantModulus" )
         throw std::runtime_error( "Invalid choice of modulus '" + choice + "' encountered in input file!\nSource: " + _name + "\n" );
-    
+
+    verifyKeyword( fp, "ResidualStabilization", _name );
+    _stab = getRealInputFrom( fp, "Failed to read residual stabilization parameter from input file!", _name );
+
     // Check that parameters is valid
     if ( _n < 2. )
         throw std::runtime_error( "Invalid input detected: parameter 'n' must be greater than\nor equal to 2.0!\n\nSource: " + _name );
